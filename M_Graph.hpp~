@@ -718,8 +718,8 @@ struct internal_Node;
     vector<size_type> i2u_; //node lookup
 
      struct internal_Edge {
-      node_type node_a; //make this a size_type for node
-      node_type node_b; //make this a size_type for node
+      node_type node_a;
+      node_type node_b;
       edge_value_type value_;
 	  size_type index_;
     };
