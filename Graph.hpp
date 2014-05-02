@@ -179,10 +179,10 @@ class Graph {
     newNode.index_ =  i2u_.size() ;
     newNode.value_  = val;
 
-    NodePoint_.push_back(newNode);
-    i2u_.push_back(NodePoint_.size()-1);
+    nodes_.push_back(newNode);
+    i2u_.push_back(nodes_.size()-1);
 
-    return Node(this, NodePoint_.size()-1);
+    return Node(this, nodes_.size()-1);
   }
 
   /** Return the node with index @a i.
@@ -217,7 +217,7 @@ class Graph {
     }
     for (auto it = i2u_.begin()+n.index()+1; it < i2u_.end(); ++it )
     {
-		--NodePoint_[(*it)].index_ ;
+		--nodes_[(*it)].index_ ;
     }
     i2u_.erase (i2u_.begin()+n.index());
     // now it should be empty for the adj vector as remove_edge function helped us to remove all the edges
@@ -254,7 +254,7 @@ class Graph {
     Graph* graph_;
     size_type edgeId_;
 
-    internal_edge& fetch(){
+    internal_edge& fetch() const{
 	return graph_->edges_[edgeId_];
     }
 
@@ -267,13 +267,14 @@ class Graph {
     }
 
     /** Return a node of this Edge */
-    Node& node1() const {
-      return graph_->Node(graph_,fetch().node_a_);
+    Node node1() const {
+      size_type idx = fetch().node_a_;
+      return Node(graph_,idx);
     }
 
     /** Return the other node of this Edge */
-    Node& node2() const {
-      return graph_->Node(graph_,fetch().node_b_);
+    Node node2() const {
+      return Node(graph_,fetch().node_b_);
     }
 
     size_type index() const {
@@ -348,7 +349,7 @@ class Graph {
 	Edge(this,adjmap_[a.uid_][b.uid_]);
     }
 
-    size_type idx = i2e.size();
+    size_type idx = i2e_.size();
     size_type uid = edges_.size();
 
     internal_edge newEdge{a.index(),b.index(),idx,val};
@@ -379,14 +380,15 @@ class Graph {
    * Complexity: No more than O(num_nodes() + num_edges()), currently O(num_edges())
    */
   size_type remove_edge(const Node& a, const Node& b) {
-    if (has_edge(a,b))
+    if (has_edge(a,b)){
         size_type euid = adjmap_[a.uid_][b.uid_];
-        i2e.erase(Edge(this,euid).index());
+        i2e_.erase(Edge(this,euid).index());
         adjmap_[a.uid_].erase(b.uid_); 
         adjmap_[b.uid_].erase(a.uid_);
         return 1;
-    else
+    }else{
 	return 0;
+    }
   }
 
   /** Remove an edge, if any, returning the number of edges removed.
@@ -408,9 +410,9 @@ class Graph {
    * Complexity: No more than O(num_nodes() + num_edges()), hopefully less
    */
   size_type remove_edge(const Edge& e) {
-    i2e.erase(e.index());
-    adjmap_[a.uid_].erase(b.uid_);
-    adjmap_[b.uid_].erase(a.uid_);
+    i2e_.erase(e.index());
+    adjmap_[e.node1().uid_].erase(e.node2().uid_);
+    adjmap_[e.node2().uid_].erase(e.node1().uid_);
     return 1;
   }
 
@@ -488,7 +490,7 @@ class Graph {
     }
 
     Edge operator*() const{
-        return graph_->Edge(graph_,graph_->i2e_[eIteratorId_]);
+        return Edge(graph_,graph_->i2e_[eIteratorId_]);
     }
 
     edge_iterator& operator++(){
