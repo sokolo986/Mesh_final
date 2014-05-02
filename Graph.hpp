@@ -57,6 +57,7 @@ class Graph {
   /** Type of indexes and sizes. Return type of Node::index() and
       Graph::num_nodes(), argument type of Graph::node. */
   typedef unsigned size_type;
+
   typedef double value_type;
 
   /** Type of node iterators, which iterate over all graph nodes. */
@@ -118,19 +119,16 @@ class Graph {
       return fetch().index_;
     }
 
-    node_value_type& value()
-    {
+    node_value_type& value(){
       return fetch().value_;
     }
 
 
-    const node_value_type& value() const
-    {
+    const node_value_type& value() const{
         return fetch().value_;
     }
 
-    size_type degree() const
-    {
+    size_type degree() const{
         return graph_->adjmap_[uid_].size();
     }
 
@@ -174,14 +172,9 @@ class Graph {
    * Complexity: O(1) amortized operations.
    */
   Node add_node(const Point& position,const node_value_type & val = node_value_type ()) {
-    internal_node newNode;
-    newNode.point_ = position;
-    newNode.index_ =  i2u_.size() ;
-    newNode.value_  = val;
-
+    internal_node newNode{i2u_.size(),position,val};
     nodes_.push_back(newNode);
     i2u_.push_back(nodes_.size()-1);
-
     return Node(this, nodes_.size()-1);
   }
 
@@ -208,19 +201,16 @@ class Graph {
    * Complexity: Polynomial in size().
    */
   void remove_node(const Node& n) {
-    for (unsigned i = 0; i < i2u_.size(); ++i)
-    {
-        if (has_edge(n, node(i)))
-		{
-			remove_edge(n, node(i));
-		}
+    auto it  = n.incident_begin();
+    while (it != n.incident_end()){
+       	remove_edge(*it);
+	++it;
     }
+
     for (auto it = i2u_.begin()+n.index()+1; it < i2u_.end(); ++it )
-    {
-		--nodes_[(*it)].index_ ;
-    }
+	--nodes_[(*it)].index_;
+
     i2u_.erase (i2u_.begin()+n.index());
-    // now it should be empty for the adj vector as remove_edge function helped us to remove all the edges
     this->adjmap_.erase(n);
   }
 
@@ -230,7 +220,6 @@ class Graph {
    * Invalidates all outstanding Node and Edge objects.
    */
   void clear() {
-    // HW0: YOUR CODE HERE
     nodes_.clear();
     edges_.clear();
     i2u_.clear();
