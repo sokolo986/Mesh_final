@@ -24,25 +24,31 @@ using namespace std;
  */
 template <typename V, typename E>
 class Graph {
-struct internal_node;
- struct internal_edge;
  private:
+   struct internal_node;
+   struct internal_edge;
 
  public:
   // PUBLIC TYPE DEFINITIONS
 
+  /** Value type of a node. */
   typedef V node_value_type;
+  
+  /** Value type of an edge. */
   typedef E edge_value_type;
+  
   /** Type of this graph. */
   typedef Graph graph_type;
 
   /** Predeclaration of Node type. */
   class Node;
+
   /** Synonym for Node (following STL conventions). */
   typedef Node node_type;
 
   /** Predeclaration of Edge type. */
   class Edge;
+
   /** Synonym for Edge (following STL conventions). */
   typedef Edge edge_type;
 
@@ -62,8 +68,9 @@ struct internal_node;
   // CONSTRUCTOR AND DESTRUCTOR
 
   /** Construct an empty graph. */
-  Graph():NodePoint_(), edges_()  {
+  Graph(): nodes_(), edges_()  {
   }
+
   /** Default destructor */
   ~Graph() = default;
 
@@ -96,49 +103,31 @@ struct internal_node;
 
     /** Return this node's position. */
     Point position() const {
-
-      return graph_->NodePoint_[uid_].point_;//graph_->NodePoint_[uid_].point;
+      return fetch().point_;
     }
 
     /* set position when given a point */
     void set_position(const Point & p)
     {
-        graph_->NodePoint_[uid_].point_ = p;
+      fetch().point_ = p;
     }
 
     /** Return this node's index, a number in the range [0, graph_size). */
     size_type index() const {
-      return graph_->NodePoint_[uid_].index_;//uid_;//graph_->NodePoint_[uid_].index_;//uid_;
+      return fetch().index_;
     }
 
-    // HW1 #1: YOUR CODE HERE
-    // Supply definitions and specifications for:
     node_value_type& value()
     {
-        return graph_->NodePoint_[uid_].value_;
+        return fetch().value_;
     }
 
 
     const node_value_type& value() const
     {
-        return graph_->NodePoint_[uid_].value_;
+        return fetch().value_;
     }
 
-
-    bool operator==(const Node& n) const{
-        return graph_==n.graph_ && this->uid_== n.uid_;
-    }
-    bool operator< (const Node& n) const{
-        if (graph_!=n.graph_)
-            return true;
-        return (this->uid_)< n.uid_;
-
-    }
-
-
-
-    // HW1 #5: YOUR CODE HERE
-    // Supply definitions AND SPECIFICATIONS for:
     size_type degree() const
     {
         if (graph_->adjmap_.count(*this)>0)
@@ -147,22 +136,35 @@ struct internal_node;
             return 0;
     }
 
+    bool operator==(const Node& n) const{
+        return graph_==n.graph_ && this->uid_== n.uid_;
+    }
+
+    bool operator< (const Node& n) const{
+        if (graph_!=n.graph_)
+            return true;
+        return (this->uid_)< n.uid_;
+    }
+
+    
     incident_iterator edge_begin() const
     {
         return incident_iterator(this->graph_, *this, 0);
     }
+
     incident_iterator edge_end() const
     {
-            return incident_iterator(this->graph_, *this, graph_->adjmap_[*this].size());
+        return incident_iterator(this->graph_, *this, graph_->adjmap_[*this].size());
     }
 
-
    private:
-    // Only Graph can access our private members
     friend class Graph;
-
     Graph* graph_;
     size_type uid_;
+
+    internal_node& fetch() const{
+	 return graph_->nodes_[uid_];
+    }
     Node(const Graph* graph,size_type uid):graph_(const_cast<Graph*>(graph)), uid_(uid){};
 
   };
@@ -273,52 +275,51 @@ struct internal_node;
     }
 
     /** Return a node of this Edge */
-    Node node1() const {
-      return graph_->edges_[edgeId_].node_a_;
+    Node& node1() const {
+      return graph_->Node(graph_,fetch().node_a_);
     }
 
     /** Return the other node of this Edge */
-    Node node2() const {
-      // HW0: YOUR CODE HERE
-      return graph_->edges_[edgeId_].node_b_;
+    Node& node2() const {
+      return graph_->Node(graph_,fetch().node_b_);
     }
 
-	size_type index() const {
-      return graph_->edges_[edgeId_].index_;
+    size_type index() const {
+      return fetch().index_;
     }
 
-    double length() const
-    {
-        // to be implemented, return 0 for now
-        return norm(node1().position() - node2().position());
+    edge_value_type& value(){
+      return fetch().value_;
     }
-    // HW1 #1: YOUR CODE HERE
-    // Supply definitions AND SPECIFICATIONS for:
-    bool operator==(const Edge& ed) const
-    {
+
+    const edge_value_type& value() const{
+      return fetch().value_;
+    }
+
+    double length() const{
+      return norm(node1().position()-node2().position());
+    }
+
+    bool operator==(const Edge& ed) const{
         return (this->node1() == ed.node1() && this->node2() == ed.node2());
     }
-    bool operator<(const Edge& ed ) const
-    {
+
+    bool operator<(const Edge& ed) const{
         return (this->node1() < ed.node1() && this->node2() < ed.node2());
     }
-    edge_value_type& value()
-    {
-        return graph_->edges_[edgeId_].value_;
-    }
-
-
-    const edge_value_type& value() const
-    {
-        return graph_->edges_[edgeId_].value_;
-    }
+    
    private:
-    // Only Graph can access our private members
     friend class Graph;
 
     Graph* graph_;
     size_type edgeId_;
-    Edge(const Graph* graph,size_type edgeId):graph_(const_cast<Graph*>(graph)), edgeId_(edgeId){};
+
+    internal_edge& fetch(){
+	return graph_->edges_[edgeId_];
+    }
+
+    Edge(const Graph* graph, size_type edgeId):graph_(const_cast<Graph*>(graph)), edgeId_(edgeId){
+    };
 
   };
 
@@ -336,8 +337,8 @@ struct internal_node;
    * Complexity: No more than O(num_nodes() + num_edges()), hopefully less
    */
   Edge edge(size_type i) const {
-    assert(i < num_edges() && i >= 0);
-    return Edge(this, i2e_[i]);        // Invalid Edge
+    assert(i < num_edges());
+    return Edge(this, i2e_[i]);       
   }
 
   /** Test whether two nodes are connected by an edge.
@@ -345,17 +346,10 @@ struct internal_node;
    * @return true if, for some @a i, edge(@a i) connects @a a and @a b.
    *
    * Complexity: No more than O(num_nodes() + num_edges()), hopefully less
+   * Currently O(log(D))
    */
-  // Use the degree of Node a and Node b and then loop through and find out if node b is connected --- we need to use the incident iterator here
   bool has_edge(const Node& a, const Node& b) const {
-    for (auto it = i2e_.begin(); it < i2e_.end(); ++it )
-    {
-        if ((edges_[(*it)].node_a_ == a &&  edges_[(*it)].node_b_ == b) ||
-            (edges_[(*it)].node_b_ == a &&  edges_[(*it)].node_a_  == b))
-            return true;
-    }
-
-    return false;
+    return adjmap_[a.index()].count(b.index()) > 0;
   }
 
   /** Add an edge to the graph, or return the current edge if it already exists.
@@ -370,105 +364,51 @@ struct internal_node;
    *
    * Complexity: No more than O(num_nodes() + num_edges()), hopefully less
    */
-  Edge add_edge(const Node& a, const Node& b, const edge_value_type & val = edge_value_type ()) {
-    // HW0: YOUR CODE HERE
-    // test if we have an edge first.
-	// Use Iterator TODO
-    for (auto it = i2e_.begin(); it < i2e_.end(); ++it )
-    {
-        if ((edges_[(*it)].node_a_ == a &&  edges_[(*it)].node_b_ == b) ||
-            (edges_[(*it)].node_b_ == a &&  edges_[(*it)].node_a_  == b))
-            return Edge(this, it - i2e_.begin());;
+  Edge add_edge(const Node& a, const Node& b, const edge_value_type& val = edge_value_type ()) {
+
+    if (has_edge(a,b)){
+	Edge(this,adjmap_[a.uid_][b.uid_]);
     }
 
-    internal_edge newEdge;
-    newEdge.node_a_ = a; // TODO idx
-    newEdge.node_b_ = b ; // TODO idx
-	newEdge.index_ = i2e_.size() ;
-	newEdge.value_  = val;
+    size_type idx = i2e.size();
+    size_type uid = edges_.size();
+
+    internal_edge newEdge{a.index(),b.index(),idx,val};
     edges_.push_back(newEdge);
-	i2e_.push_back(edges_.size()-1);
+    i2e_.push_back(uid);    
 
-    // add edge information to the hash_map,adjmap_, here we add the node a as the key, and the edge id to the vector
-    adjmap_[a].push_back(newEdge.index_);
-    adjmap_[b].push_back(newEdge.index_);
-
-    return Edge(this,edges_.size()-1);
-
+    adjmap_[a.uid_][b.uid_] = uid;
+    adjmap_[b.uid_][a.uid_] = uid;
+    return Edge(this,uid);
   }
 
+
   /** Remove an edge, if any, returning the number of edges removed.
-   * @param[in] a,b The nodes potentially defining an edge to be removed.
-   * @return 1 if old has_edge(@a a, @a b), 0 otherwise
-   * @pre @a a and @a b are valid nodes of this graph
-   * @post !has_edge(@a a, @a b)
-   * @post new num_edges() == old num_edges() - result
+   * @param[in] e 	The Edge to be removed
+   * @return 		1 if old has_edge(@a a, @a b), 0 otherwise
+   * @post 		new num_edges() == old num_edges() - result
+   * @post		has_edge(@a e)==False
+   * @post		invalidates all edge iterators
+   * This is a synonym for remove_edge(@a e.node1(), @a e.node2()), but its
+   * implementation can assume that @a e is definitely an edge of the graph.
+   * This might allow a faster implementation.
    *
    * Can invalidate edge indexes -- in other words, old edge(@a i) might not
    * equal new edge(@a i). Can invalidate all edge and incident iterators.
    * Invalidates any edges equal to Edge(@a a, @a b). Must not invalidate
    * other outstanding Edge objects.
    *
-   * Complexity: No more than O(num_nodes() + num_edges()), hopefully less
+   * Complexity: No more than O(num_nodes() + num_edges()), currently O(num_edges())
    */
   size_type remove_edge(const Node& a, const Node& b) {
-    // HW1 #1: YOUR CODE HERE
-    if (! has_edge(a, b))
-		return 0;
-
-
-    // delete the item in i2e_ vector and decrement all the relavent index_ by 1
-    for (auto it = i2e_.begin(); it < i2e_.end(); ++it )
-    {
-        if ((edges_[(*it)].node_a_.index() == a.index() &&  edges_[(*it)].node_b_.index() == b.index()) ||
-            (edges_[(*it)].node_b_.index() == a.index() &&  edges_[(*it)].node_a_.index() == b.index()))
-		{
-
-		    			// here we delete the index from adj vector and update the respective index
-			for (auto a_i = adjmap_[a].begin(); a_i < adjmap_[a].end(); ++a_i )
-			{
-               if ( (*a_i) == edges_[(*it)].index_)
-                {
-                    for (auto a_it = a_i+1; a_it < adjmap_[a].end(); ++a_it ) //adjmap_[a].begin()+ (a_i- adjmap_[a].begin())
-                    {
-                        --(*a_it) ;
-                    }
-                    adjmap_[a].erase(a_i);
-                    break;
-                }
-			}
-
-			for (auto b_i = adjmap_[b].begin(); b_i < adjmap_[b].end(); ++b_i )
-			{
-                if ((*b_i) == edges_[(*it)].index_)
-                {
-                    for (auto b_it = b_i+1; b_it < adjmap_[b].end(); ++b_it )
-                    {
-                        --(*b_it) ;
-                    }
-                    adjmap_[b].erase(b_i);
-                    break;
-                }
-			}
-
-
-
-            // here we update the actual index in the edge object
-
-			for (auto i = i2e_.begin()+edges_[(*it)].index_+1; i < i2e_.end(); ++i )
-			{
-				--edges_[(*i)].index_ ;
-			}
-			i2e_.erase (i2e_.begin()+edges_[(*it)].index_);
-
-
-			return 1;
-
-		}
-
-    }
-
-
+    if (has_edge(a,b))
+        size_type euid = adjmap_[a.uid_][b.uid_];
+        i2e.erase(Edge(this,euid).index());
+        adjmap_[a.uid_].erase(b.uid_); 
+        adjmap_[b.uid_].erase(a.uid_);
+        return 1;
+    else
+	return 0;
   }
 
   /** Remove an edge, if any, returning the number of edges removed.
@@ -490,48 +430,10 @@ struct internal_node;
    * Complexity: No more than O(num_nodes() + num_edges()), hopefully less
    */
   size_type remove_edge(const Edge& e) {
-    // HW1 #1: YOUR CODE HERE
-
-			// here we delete the index from adj vector and update the respective index
-			Node a = e.node1;
-			Node b = e.node2;
-			for (auto a_i = adjmap_[a].begin(); a_i < adjmap_[a].end(); ++a_i )
-			{
-                if ((*a_i) == e.index())
-                {
-                    for (auto a_it = adjmap_[a].begin()+a_i+1; a_it < adjmap_[a].end(); ++a_it )
-                    {
-                        --(*a_it) ;
-                    }
-                    adjmap_[a].erase(a_i);
-                    break;
-
-                }
-			}
-
-			for (auto b_i = adjmap_[b].begin(); b_i < adjmap_[b].end(); ++b_i )
-			{
-                if ((*b_i) == e.index())
-                {
-                    for (auto b_it = adjmap_[b].begin()+b_i+1; b_it < adjmap_[b].end(); ++b_it )
-                    {
-                        --(*b_it) ;
-                    }
-                    adjmap_[b].erase(b_i);
-                    break;
-                }
-			}
-
-
-
-
-	for (auto it = i2e_.begin()+e.index()+1; it < i2e_.end(); ++it )
-	{
-        --edges_[(*it)].index_ ;
-	}
-	i2e_.erase (i2e_.begin()+e.index());
-
-	return 0;
+    i2e.erase(e.index());
+    adjmap_[a.uid_].erase(b.uid_);
+    adjmap_[b.uid_].erase(a.uid_);
+    return 1;
   }
 
   // ITERATORS
@@ -615,48 +517,37 @@ struct internal_node;
 
     /** Construct an invalid edge_iterator. */
     edge_iterator() {
-      // HW1 #3: YOUR CODE HERE
     }
 
-    // HW1 #3: YOUR CODE HERE
-    // Supply definitions AND SPECIFICATIONS for:
-    Edge operator*() const
-    {
+    Edge operator*() const{
         return Edge(graph_,graph_->i2e_[eIteratorId_]);
     }
-    edge_iterator& operator++()
-    {
-        eIteratorId_ ++ ;
+
+    edge_iterator& operator++(){
+        eIteratorId_++;
         return *this;
     }
-    bool operator==(const edge_iterator& eit) const
-    {
+
+    bool operator==(const edge_iterator& eit) const {
         return (this->graph_ == eit.graph_ && this->eIteratorId_ == eit.eIteratorId_);
     }
 
    private:
     friend class Graph;
-    // HW1 #3: YOUR CODE HERE
 
     Graph* graph_;
     size_type eIteratorId_;
+
     edge_iterator(const Graph* graph,size_type eIteratorId):graph_(const_cast<Graph*>(graph)), eIteratorId_(eIteratorId){};
-
-
-
   };
 
-  // HW1 #3: YOUR CODE HERE
-  // Supply definitions AND SPECIFICATIONS for:
-  edge_iterator edge_begin() const
-  {
+  edge_iterator edge_begin() const {
     return edge_iterator(this, 0);
   }
-   edge_iterator edge_end() const
-   {
-    return edge_iterator(this, this->i2e_.size());
 
-   }
+  edge_iterator edge_end() const{
+    return edge_iterator(this, this->i2e_.size());
+  }
 
 
   /** @class Graph::incident_iterator
@@ -730,7 +621,7 @@ struct internal_node;
      vector<size_type> i2e_;
 
      /* adjmap_[node_a_idx][node_b_idx] = edge_idx && O(1) Access Time */
-     vector<hash<size_type>> adjmap_; 
+     vector<map<size_type,size_type>> adjmap_; 
 };
 
 #endif
