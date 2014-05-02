@@ -13,14 +13,18 @@
 #include <cassert>
 #include <unordered_map>
 #include <map>
-
-
 using namespace std;
-/** @class Graph
- * @brief A template for 3D undirected graphs.
+
+
+/** @class 	Graph
+ * @brief 	A template for 3D undirected graphs
+ * @tparam  V	The value type for a node 
  *
- * Users can add and retrieve nodes and edges. Edges are unique (there is at
- * most one edge between any pair of distinct nodes).
+ * A Graph is a set of Nodes and Edges s.t. G = <N,E> for N = <n_0,n_1,...n_m-1> and E = <e_0, e_1, .. e_d-1> where @a m == the number of valid nodes and @a d == the number of valid edges
+ * A Node is a proxy for the abstract representation of the data passed into to it
+ * An Edge connects two nodes s.t. <N_i,N_j> == <N_j,N_i> for all i,j in the set of valid Nodes for this Graph subject to !(i==j)
+ * Users can add and retrieve nodes and edges. There is at most one edge between any pair of distinct nodes. 
+ * V describes a user-defined abstract representation of a node (i.e. Mass, Temperature, Weight).
  */
 template <typename V, typename E>
 class Graph {
@@ -29,8 +33,6 @@ class Graph {
    struct internal_edge;
 
  public:
-  // PUBLIC TYPE DEFINITIONS
-
   /** Value type of a node. */
   typedef V node_value_type;
   
@@ -55,6 +57,7 @@ class Graph {
   /** Type of indexes and sizes. Return type of Node::index() and
       Graph::num_nodes(), argument type of Graph::node. */
   typedef unsigned size_type;
+  typedef double value_type;
 
   /** Type of node iterators, which iterate over all graph nodes. */
   class node_iterator;
@@ -65,7 +68,8 @@ class Graph {
   /** Type of incident iterators, which iterate incident edges to a node. */
   class incident_iterator;
 
-  // CONSTRUCTOR AND DESTRUCTOR
+
+  // CONSTRUCTOR AND DESTRUCTOR ----------------------
 
   /** Construct an empty graph. */
   Graph(): nodes_(), edges_()  {
@@ -82,22 +86,19 @@ class Graph {
    * Node objects are used to access information about the Graph's nodes.
    */
   class Node :private totally_ordered<Node> {
+   private:
+    friend class Graph;
+    Graph* graph_;
+    size_type uid_;
+
+    internal_node& fetch() const{
+	 return graph_->nodes_[uid_];
+    }
+    Node(const Graph* graph,size_type uid):graph_(const_cast<Graph*>(graph)), uid_(uid){
+    };
+
    public:
-    /** Construct an invalid node.
-     *
-     * Valid nodes are obtained from the Graph class, but it
-     * is occasionally useful to declare an @i invalid node, and assign a
-     * valid node to it later. For example:
-     *
-     * @code
-     * Node x;
-     * if (...should pick the first node...)
-     *   x = graph.node(0);
-     * else
-     *   x = some other node using a complicated calculation
-     * do_something(x);
-     * @endcode
-     */
+    /** Return an invalid node. */
     Node() {
     }
 
@@ -119,7 +120,7 @@ class Graph {
 
     node_value_type& value()
     {
-        return fetch().value_;
+      return fetch().value_;
     }
 
 
@@ -130,10 +131,7 @@ class Graph {
 
     size_type degree() const
     {
-        if (graph_->adjmap_.count(*this)>0)
-            return graph_->adjmap_[*this].size();
-        else
-            return 0;
+        return graph_->adjmap_[uid_].size();
     }
 
     bool operator==(const Node& n) const{
@@ -145,28 +143,14 @@ class Graph {
             return true;
         return (this->uid_)< n.uid_;
     }
-
     
-    incident_iterator edge_begin() const
-    {
+    incident_iterator edge_begin() const{
         return incident_iterator(this->graph_, *this, 0);
     }
 
-    incident_iterator edge_end() const
-    {
-        return incident_iterator(this->graph_, *this, graph_->adjmap_[*this].size());
+    incident_iterator edge_end() const{
+        return incident_iterator(this->graph_, *this, graph_->adjmap_[uid_].size());
     }
-
-   private:
-    friend class Graph;
-    Graph* graph_;
-    size_type uid_;
-
-    internal_node& fetch() const{
-	 return graph_->nodes_[uid_];
-    }
-    Node(const Graph* graph,size_type uid):graph_(const_cast<Graph*>(graph)), uid_(uid){};
-
   };
 
   /** Return the number of nodes in the graph.
@@ -201,8 +185,6 @@ class Graph {
     return Node(this, NodePoint_.size()-1);
   }
 
-
-
   /** Return the node with index @a i.
    * @pre 0 <= @a i < size()
    * @post result_node.index() == i
@@ -226,7 +208,6 @@ class Graph {
    * Complexity: Polynomial in size().
    */
   void remove_node(const Node& n) {
-    // HW1 #1: YOUR CODE HERE
     for (unsigned i = 0; i < i2u_.size(); ++i)
     {
         if (has_edge(n, node(i)))
@@ -241,8 +222,6 @@ class Graph {
     i2u_.erase (i2u_.begin()+n.index());
     // now it should be empty for the adj vector as remove_edge function helped us to remove all the edges
     this->adjmap_.erase(n);
-
-
   }
 
   /** Remove all nodes and edges from this graph.
@@ -252,7 +231,7 @@ class Graph {
    */
   void clear() {
     // HW0: YOUR CODE HERE
-    NodePoint_.clear();
+    nodes_.clear();
     edges_.clear();
     i2u_.clear();
     i2e_.clear();
@@ -269,6 +248,19 @@ class Graph {
    * are considered equal if they connect the same nodes, in either order.
    */
   class Edge :private totally_ordered<Edge>{
+   private:
+    friend class Graph;
+
+    Graph* graph_;
+    size_type edgeId_;
+
+    internal_edge& fetch(){
+	return graph_->edges_[edgeId_];
+    }
+
+    Edge(const Graph* graph, size_type edgeId):graph_(const_cast<Graph*>(graph)), edgeId_(edgeId){
+    };
+
    public:
     /** Construct an invalid Edge. */
     Edge() {
@@ -296,7 +288,7 @@ class Graph {
       return fetch().value_;
     }
 
-    double length() const{
+    value_type length() const{
       return norm(node1().position()-node2().position());
     }
 
@@ -307,20 +299,6 @@ class Graph {
     bool operator<(const Edge& ed) const{
         return (this->node1() < ed.node1() && this->node2() < ed.node2());
     }
-    
-   private:
-    friend class Graph;
-
-    Graph* graph_;
-    size_type edgeId_;
-
-    internal_edge& fetch(){
-	return graph_->edges_[edgeId_];
-    }
-
-    Edge(const Graph* graph, size_type edgeId):graph_(const_cast<Graph*>(graph)), edgeId_(edgeId){
-    };
-
   };
 
   /** Return the total number of edges in the graph.
@@ -349,7 +327,7 @@ class Graph {
    * Currently O(log(D))
    */
   bool has_edge(const Node& a, const Node& b) const {
-    return adjmap_[a.index()].count(b.index()) > 0;
+    return adjmap_[a.uid_].count(b.uid_) > 0;
   }
 
   /** Add an edge to the graph, or return the current edge if it already exists.
@@ -456,24 +434,18 @@ class Graph {
 
     /** Construct an invalid node_iterator. */
     node_iterator() {
-      // HW1 #2: YOUR CODE HERE
     }
 
-    // HW1 #2: YOUR CODE HERE
-    // Supply definitions AND SPECIFICATIONS for:
-    Node operator*() const
-    {
+    Node operator*() const{
         auto it = Node(graph_,graph_->i2u_[nIteratorId_]);
         return it;
     }
 
-    node_iterator& operator++()
-    {
-        nIteratorId_ ++ ;
+    node_iterator& operator++(){
+        nIteratorId_++;
         return *this;
     }
-    bool operator==(const node_iterator& nit) const
-    {
+    bool operator==(const node_iterator& nit) const{
         return (this->graph_ == nit.graph_ && this->nIteratorId_ == nit.nIteratorId_);
     }
 
@@ -482,20 +454,16 @@ class Graph {
     friend class edge_iterator;
     Graph* graph_;
     size_type nIteratorId_;
-    node_iterator(const Graph* graph,size_type nIteratorId):graph_(const_cast<Graph*>(graph)), nIteratorId_(nIteratorId){};
-
-    // HW1 #3: YOUR CODE HERE
+    node_iterator(const Graph* graph,size_type nIteratorId):graph_(const_cast<Graph*>(graph)), nIteratorId_(nIteratorId){
+    };
   };
 
-  // HW1 #2: YOUR CODE HERE
-  // Supply definitions AND SPECIFICATIONS for:
-  node_iterator node_begin() const
-  {
+  node_iterator node_begin() const{
       return node_iterator(this, 0);
   }
-  node_iterator node_end() const
-  {
-      return node_iterator(this, this->i2u_.size());
+
+  node_iterator node_end() const{
+      return node_iterator(this, size());
   }
 
 
@@ -520,7 +488,7 @@ class Graph {
     }
 
     Edge operator*() const{
-        return Edge(graph_,graph_->i2e_[eIteratorId_]);
+        return graph_->Edge(graph_,graph_->i2e_[eIteratorId_]);
     }
 
     edge_iterator& operator++(){
@@ -571,32 +539,30 @@ class Graph {
     incident_iterator() {
     }
 
-    // HW1 #5: YOUR CODE HERE
-    // Supply definitions AND SPECIFICATIONS for:
-    Edge operator*() const
-    {
-       size_type edgeIndex  =  this->graph_->adjmap_[thisnode_][adjedgeId_];
-
-        return graph_->edge(edgeIndex);
+    Edge operator*() const{
+       std::map<size_type,size_type>::iterator it = graph_->adjmap_[thisnode_].begin()+adjedgeId_;
+       
+       size_type edgeIndex  =  it->second;
+       return graph_->edge(edgeIndex);
     }
-    incident_iterator& operator++()
-    {
+
+    incident_iterator& operator++(){
         ++adjedgeId_;
         return *this;
     }
-    bool operator==(const incident_iterator& it) const
-    {
+
+    bool operator==(const incident_iterator& it) const{
         return (this->graph_ == it.graph_ && this->thisnode_ == it.thisnode_ && this->adjedgeId_ == it.adjedgeId_);
     }
 
    private:
     friend class Graph;
-    // HW1 #5: YOUR CODE HERE
-
     Graph* graph_;
     size_type adjedgeId_;
-    Node thisnode_;
-    incident_iterator(const Graph* graph,Node thisnode, size_type adjedgeId):graph_(const_cast<Graph*>(graph)),thisnode_(thisnode), adjedgeId_(adjedgeId){};
+    size_type thisnode_;
+
+    incident_iterator(const Graph* graph, Node thisnode, size_type adjedgeId):graph_(const_cast<Graph*>(graph)),thisnode_(thisnode.uid_), adjedgeId_(adjedgeId){
+    };
 
   };
 
