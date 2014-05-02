@@ -14,7 +14,6 @@
 #include <fstream>
 
 #include "Mesh.hpp"
-
 // Standard gravity (average gravity at Earth's surface) in meters/sec^2
 static constexpr double grav = 9.80665;
 
@@ -34,7 +33,6 @@ typedef struct QVar {
   QVar(double h_, double hu_, double hv_)
     : h(h_), hu(hu_), hv(hv_) {
   }
-  // More operators?
   
   
   QVar operator+(const QVar& q){
@@ -94,18 +92,13 @@ typedef struct QVar {
 
 }QVar;
 
-QVar operator*(const double& lhs, const QVar& rhs){
-	double h_ = lhs * rhs.h;
-	double hu_ = lhs * rhs.hu;
-	double hv_ = lhs * rhs.hv;
-	return QVar(h_,hu_,hv_);  
+
+QVar operator*(double n, QVar& q){
+	return QVar(n*q.h,n*q.hu,n*q.hv);  
 }
 
-QVar operator/(const QVar& lhs, const double& rhs) {
-	double h_ = lhs.h / rhs;
-	double hu_ = lhs.hu / rhs;
-	double hv_ = lhs.hv / rhs;
-	return QVar(h_, hu_, hv_);
+QVar operator/(double n,QVar& q) {
+	return QVar(n/q.h, n/q.hu, n/q.hv);
 }
 
 
@@ -154,11 +147,11 @@ struct EdgeFluxCalculator {
 struct NodePosition {
   template <typename NODE>
   Point operator()(const NODE& n) {
+	// return the height stored in node value as the z direction
     return Point(n.position().x, n.position().y, n.value().h);
   }
 };
 
-// HW4B: Placeholder for Mesh Type!
 // Define NodeData, EdgeData, TriData, etc
 typedef Mesh<QVar,double,QVar> MeshType;
 
@@ -175,17 +168,15 @@ template <typename MESH, typename FLUX>
    @return: return total time t+dt
 */
 double hyperbolic_step(MESH& mesh, FLUX& f, double t, double dt) {
-  // HW4B: YOUR CODE HERE
   // Step the finite volume model in time by dt.
   // Implement Equation 7 from your pseudocode here.
-  
-  
-  // discuss on the triangle1 , 2, 3, what if they dont exist
+
   for (auto it = mesh.tri_begin(); it!=mesh.tri_end() ; ++it)
   {
 	// value function will return the flux
 	QVar total_flux=QVar(0,0,0);
 	QVar qm = QVar(0,0,0);
+	// iterate through 3 edges of a triangle
 	auto edgetemp = (*it).edge1();
 	for (int num = 0; num < 3; num++)
 	{	
@@ -200,52 +191,26 @@ double hyperbolic_step(MESH& mesh, FLUX& f, double t, double dt) {
 		{
 			auto nx =  ((*it).norm_vector(edgetemp)).x;
 			auto ny =  ((*it).norm_vector(edgetemp)).y;
-			//cout << " triangle " << (*it).index() << " edge " << num 
-			//<< " norm vector " << nx << " " << ny  << endl;
-			//new entry
-			//mesh.print_debug(edgetemp.index());
 			
-			
-			for (auto i = mesh.tri_edge_begin(edgetemp.index()); i != mesh.tri_edge_end(edgetemp.index()); ++i)
-			{	
-			
-				//cout << " i am in the for loop " << (*i).index() << endl;
-				if (!(*i==*it)){
+			// find the neighbour of a common edge
+			for (auto i = mesh.tri_edge_begin(edgetemp.index()); i != mesh.tri_edge_end(edgetemp.index()); ++i){	
+				if (!(*i==*it))
 					qm = (*i).value();
-					}
 			}
-
-			//cout << " qm is " << qm.h << " " << qm.hu << " " << qm.hv << endl;
-			/*
-			auto vec = mesh.edge_lookup_[edgetemp.index()]; // vector of triangle for common edge;
-
-			for (auto i = vec.begin(); i < vec.end(); ++i)
-			{	
-				if ((*i) != (*it).index() )
-					qm = mesh.triangle((*i)).value();
-			} */
-			//auto testing = f(nx, ny, dt, (*it).value(), qm);
-			//cout << " flux is " << testing.h << " " << testing.hu << " " << testing.hv << endl;
-			
-			
+			// calculat the total flux
 			total_flux += f(nx, ny, dt, (*it).value(), qm);
 		}
 		else{
+			// when it doesnt have a neighbour shared with this edge
 			auto nx =  ((*it).norm_vector(edgetemp)).x;
 			auto ny =  ((*it).norm_vector(edgetemp)).y;
-		//	cout << "triangle " << (*it).index() << " edge " << num 
-		//	<< " norm vector " << nx << " " << ny  << endl;
-			qm = QVar((*it).value().h, 0, 0 );
-		//	cout << " else statement qm is " << qm.h << " " << qm.hu << " " << qm.hv << endl;
+			qm = QVar((*it).value().h, 0, 0 ); // approximation
+
 			total_flux += f(nx, ny, dt, (*it).value(), qm);
-			
-		//	auto testing = f(nx, ny, dt, (*it).value(), qm);
-		//	cout << " flux is " << testing.h << " " << testing.hu << " " << testing.hv << endl;
 		}
 	}
 	
-	double temp = - dt / (*it).area();
-	(*it).value() +=  total_flux * temp;
+	(*it).value() +=  total_flux * (- dt / (*it).area());
   }
   
   
@@ -263,9 +228,7 @@ template <typename MESH>
  * @post: update the nodes values based on approximation of the average of neighbours values
 		  refer to equation 9 on the notes
 */
-
 void post_process(MESH& m) {
-  // HW4B: Post-processing step
   // Translate the triangle-averaged values to node-averaged values
   // Implement Equation 8 from your pseudocode here
   	// iterate through all the nodes
@@ -284,18 +247,6 @@ void post_process(MESH& m) {
 	}
 
 	(*it).value() = sum/sumTriArea; // update nodes value
-
-	/*auto vec = m.node_lookup_[(*it).index()];
-	
-	
-	for (auto adji = vec.begin(); adji !=  vec.end(); ++ adji)
-	{
-		auto tri =  m.triangle( (*adji) );
-		sum += tri.area() * tri.value();
-		sumTriArea += tri.area();  
-	}
-	
-	(*it).value() = sum/sumTriArea; // update nodes value*/
   }
 }
 
@@ -312,9 +263,9 @@ struct EdgeComparator {
 }EdgeComparator;
 
 struct HeightComparator {
-  /** Struct/Class of comparator to compare edge length
-  * @param[in] two triangle objects
-  * @param[out] boolean, true if the first triangle has the smallest edge length than the second triangle
+  /** Struct/Class of comparator to compare height value stored in Node 
+  * @param[in] two Node objects
+  * @param[out] boolean, true if the height in first Node value  is smaller than  height in Second Node value
   */ 
    template <typename Node>
    bool operator()(const Node& t1, const Node& t2) const {
@@ -359,7 +310,7 @@ int main(int argc, char* argv[])
 
   // HW4B Initialization
   // Set the initial conditions
-  int wave = 0, peddle=1, dam=0;
+  int wave = 0, peddle=0, dam=1;
   if (wave){
 	for ( auto it = mesh.node_begin(); it!= mesh.node_end(); ++it){
 		auto x = (*it).position().x;
@@ -382,7 +333,6 @@ int main(int argc, char* argv[])
   else if (dam){
 	for ( auto it = mesh.node_begin(); it!= mesh.node_end(); ++it){
 		auto x = (*it).position().x;
-		//auto y = (*it).position().y;
 		int H =0;
 		if (x < 0)
 			H = 1;
@@ -420,16 +370,9 @@ int main(int argc, char* argv[])
   // Compute the minimum edge length and maximum water height for computing dt
   auto min_length = *std::min_element(mesh.edge_begin(), mesh.edge_end(), EdgeComparator);
   
-  cout << "min length is " << min_length.length() << endl;
-
   auto max_h = *std::max_element(mesh.node_begin(), mesh.node_end(), HeightComparator);
   
-  cout << "max height is " << max_h.value().h << endl;
-  
-
-
   double dt = 0.25 * min_length.length() / (sqrt(grav * max_h.value().h));
-  cout << "dt is " << dt << endl;
   double t_start = 0;
   double t_end = 10;
 

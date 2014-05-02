@@ -175,6 +175,7 @@ class Graph {
     internal_node newNode{i2u_.size(),position,val};
     nodes_.push_back(newNode);
     i2u_.push_back(nodes_.size()-1);
+	adjmap_.push_back(map<size_type,size_type>());
     return Node(this, nodes_.size()-1);
   }
 
@@ -317,7 +318,7 @@ class Graph {
    * Currently O(log(D))
    */
   bool has_edge(const Node& a, const Node& b) const {
-    return adjmap_[a.uid_].count(b.uid_) > 0;
+	return adjmap_[a.uid_].count(b.uid_) > 0;
   }
 
   /** Add an edge to the graph, or return the current edge if it already exists.
@@ -334,8 +335,9 @@ class Graph {
    */
   Edge add_edge(const Node& a, const Node& b, const edge_value_type& val = edge_value_type ()) {
 
-    if (has_edge(a,b)){
-	Edge(this,adjmap_[a.uid_][b.uid_]);
+    
+	if (has_edge(a,b)){
+		return Edge(this,adjmap_[a.uid_][b.uid_]);
     }
 
     size_type idx = i2e_.size();
@@ -344,7 +346,6 @@ class Graph {
     internal_edge newEdge{a.index(),b.index(),idx,val};
     edges_.push_back(newEdge);
     i2e_.push_back(uid);    
-
     adjmap_[a.uid_][b.uid_] = uid;
     adjmap_[b.uid_][a.uid_] = uid;
     return Edge(this,uid);
@@ -531,7 +532,9 @@ class Graph {
     }
 
     Edge operator*() const{
-       std::map<size_type,size_type>::iterator it = graph_->adjmap_[thisnode_].begin()+adjedgeId_;
+      //std::map<size_type,size_type>::iterator 
+       auto it = graph_->adjmap_[thisnode_].begin();
+	std::advance(it,adjedgeId_);
        
        size_type edgeIndex  =  it->second;
        return graph_->edge(edgeIndex);
