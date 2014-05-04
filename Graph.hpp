@@ -440,6 +440,9 @@ class Graph {
     bool operator==(const node_iterator& nit) const{
         return (this->graph_ == nit.graph_ && this->nIteratorId_ == nit.nIteratorId_);
     }
+    bool operator<(const node_iterator& nit) const{
+        return (this->graph_ == nit.graph_ && this->nIteratorId_ < nit.nIteratorId_);
+    }
 
    private:
     friend class Graph;

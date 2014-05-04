@@ -480,6 +480,14 @@ class Mesh {
 	++idx_;
 	return *this;
     }
+    tri_iterator& operator--(){
+        --idx_;
+        return *this;
+    }
+    tri_iterator& operator-(tri_iterator& a){
+        idx_= idx_ - a.idx_;
+        return *this;
+    }
 
     /** Test the equality of an iterator based on current position.  */
     bool operator==(const tri_iterator& a) const{
