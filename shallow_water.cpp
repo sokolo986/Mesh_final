@@ -354,7 +354,7 @@ int main(int argc, char* argv[])
 
   // HW4B: Need to define Mesh::node_type and node/edge iterator
   // before these can be used!
-
+  
   auto node_map = viewer.empty_node_map(mesh);
   viewer.add_nodes(mesh.node_begin(), mesh.node_end(),
                    CS207::DefaultColor(), NodePosition(), node_map);
