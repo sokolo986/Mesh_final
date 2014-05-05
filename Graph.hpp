@@ -11,12 +11,10 @@
 #include <algorithm>
 #include <vector>
 #include <cassert>
+#include <unordered_map>
 #include <map>
-
 using namespace std;
 
-//1* Indicates an alignment issue correction
-//2* Post-Increment Operator Fix
 
 /** @class 	Graph
  * @brief 	A template for 3D undirected graphs
@@ -56,12 +54,11 @@ class Graph {
   /** Synonym for Edge (following STL conventions). */
   typedef Edge edge_type;
 
-  /** Type of indexes and sizes. */
+  /** Type of indexes and sizes. Return type of Node::index() and
+      Graph::num_nodes(), argument type of Graph::node. */
   typedef unsigned size_type;
 
-  /** Type of Point operations. */
-  //typedef double value_type;
-  typedef typename Point::value_type value_type;
+  typedef double value_type;
 
   /** Type of node iterators, which iterate over all graph nodes. */
   class node_iterator;
@@ -98,22 +95,26 @@ class Graph {
     internal_node& fetch() const{
 	 return graph_->nodes_[uid_];
     }
-
-    Node(const Graph* graph,size_type uid): graph_(const_cast<Graph*>(graph)), uid_(uid){
+    Node(const Graph* graph,size_type uid):graph_(const_cast<Graph*>(graph)), uid_(uid){
     };
 
    public:
+    /** Return an invalid node. */
     Node() {
     }
 
+    /** Return this node's position. */
     Point position() const {
       return fetch().point_;
     }
 
-    void set_position(const Point & p){
+    /* set position when given a point */
+    void set_position(const Point & p)
+    {
       fetch().point_ = p;
     }
 
+    /** Return this node's index, a number in the range [0, graph_size). */
     size_type index() const {
       return fetch().index_;
     }
@@ -121,6 +122,7 @@ class Graph {
     node_value_type& value(){
       return fetch().value_;
     }
+
 
     const node_value_type& value() const{
         return fetch().value_;
@@ -131,19 +133,21 @@ class Graph {
     }
 
     bool operator==(const Node& n) const{
-        return uid_== n.uid_ && graph_==n.graph_;
+        return graph_==n.graph_ && this->uid_== n.uid_;
     }
 
     bool operator< (const Node& n) const{
-        return uid_< n.uid_ && graph_==n.graph_;
+        if (graph_!=n.graph_)
+            return true;
+        return (this->uid_)< n.uid_;
     }
     
     incident_iterator edge_begin() const{
-        return incident_iterator(graph_, *this, 0);
+        return incident_iterator(this->graph_, *this, 0);
     }
 
     incident_iterator edge_end() const{
-        return incident_iterator(graph_, *this, graph_->adjmap_[uid_].size());
+        return incident_iterator(this->graph_, *this, graph_->adjmap_[uid_].size());
     }
   };
 
@@ -167,11 +171,11 @@ class Graph {
    *
    * Complexity: O(1) amortized operations.
    */
-  Node add_node(const Point& position,const node_value_type & val = node_value_type()) {
-    internal_node newNode{position,i2u_.size(),val};
+  Node add_node(const Point& position,const node_value_type & val = node_value_type ()) {
+    internal_node newNode{i2u_.size(),position,val};
     nodes_.push_back(newNode);
     i2u_.push_back(nodes_.size()-1);
-    adjmap_.push_back(map<size_type,size_type>());
+	adjmap_.push_back(map<size_type,size_type>());
     return Node(this, nodes_.size()-1);
   }
 
@@ -199,19 +203,39 @@ class Graph {
    */
   void remove_node(const Node& n) {
     auto it  = n.incident_begin();
-    while (it != n.incident_end())
-       	if (remove_edge(*it)!=1)
-	     ++it;
-    auto idx = n.index();
-    auto begin = i2u_.begin();
-    auto end = i2u_.end();
-    for (auto it = begin+idx+1; it < end; ++it )
+    while (it != n.incident_end()){
+       	remove_edge(*it);
+	++it;
+    }
+
+    for (auto it = i2u_.begin()+n.index()+1; it < i2u_.end(); ++it )
 	--nodes_[(*it)].index_;
 
-    i2u_.erase (begin+idx);
-    adjmap_.erase(n.uid_);
+    i2u_.erase (i2u_.begin()+n.index());
+    this->adjmap_.erase(n);
   }
 
+  
+  /*
+  provide interface for parallel computing on all the node
+  */
+  template<typename ITER, typename FUNC>
+  void applytoall(ITER ibegin, ITER iend, FUNC functor){
+  omp_set_num_threads(8);
+  #pragma omp parallel
+  {
+	for (auto i = ibegin; i< iend; ++i)
+	{
+	#pragma omp single nowait
+	{
+		functor((*i));
+	}
+	}
+  
+  }
+  }
+  
+  
   /** Remove all nodes and edges from this graph.
    * @post num_nodes() == 0 && num_edges() == 0
    *
@@ -255,7 +279,8 @@ class Graph {
 
     /** Return a node of this Edge */
     Node node1() const {
-      return Node(graph_,fetch().node_a_);
+      size_type idx = fetch().node_a_;
+      return Node(graph_,idx);
     }
 
     /** Return the other node of this Edge */
@@ -280,11 +305,11 @@ class Graph {
     }
 
     bool operator==(const Edge& ed) const{
-        return (node1() == ed.node1()) && (node2() == ed.node2());
+        return (this->node1() == ed.node1() && this->node2() == ed.node2());
     }
 
     bool operator<(const Edge& ed) const{
-        return (node1() < ed.node1()) && (node2() < ed.node2());
+        return (this->node1() < ed.node1() && this->node2() < ed.node2());
     }
   };
 
@@ -330,6 +355,8 @@ class Graph {
    * Complexity: No more than O(num_nodes() + num_edges()), hopefully less
    */
   Edge add_edge(const Node& a, const Node& b, const edge_value_type& val = edge_value_type ()) {
+
+    
 	if (has_edge(a,b)){
 		return Edge(this,adjmap_[a.uid_][b.uid_]);
     }
@@ -337,7 +364,7 @@ class Graph {
     size_type idx = i2e_.size();
     size_type uid = edges_.size();
 
-    internal_edge newEdge{idx,a.index(),b.index(),val};
+    internal_edge newEdge{a.index(),b.index(),idx,val};
     edges_.push_back(newEdge);
     i2e_.push_back(uid);    
     adjmap_[a.uid_][b.uid_] = uid;
@@ -401,12 +428,12 @@ class Graph {
   }
 
   // ITERATORS
-  
+
   /** @class Graph::node_iterator
    * @brief Iterator class for nodes. A forward iterator. */
   class node_iterator :private totally_ordered<node_iterator>{
    public:
-    //These type definitions help us use STL's iterator_traits.
+    // These type definitions help us use STL's iterator_traits.
     /** Element type. */
     typedef Node value_type;
     /** Type of pointers to elements. */
@@ -417,25 +444,22 @@ class Graph {
     typedef std::input_iterator_tag iterator_category;
     /** Difference between iterators */
     typedef std::ptrdiff_t difference_type;
-    
 
     /** Construct an invalid node_iterator. */
     node_iterator() {
     }
 
     Node operator*() const{
-        return Node(graph_,graph_->i2u_[nIteratorId_]);
+        auto it = Node(graph_,graph_->i2u_[nIteratorId_]);
+        return it;
     }
 
     node_iterator& operator++(){
-        ++nIteratorId_;
+        nIteratorId_++;
         return *this;
     }
     bool operator==(const node_iterator& nit) const{
-        return (this->nIteratorId_ == nit.nIteratorId_ && this->graph_ == nit.graph_);
-    }
-    bool operator<(const node_iterator& nit) const{
-        return (this->graph_ == nit.graph_ && this->nIteratorId_ < nit.nIteratorId_);
+        return (this->graph_ == nit.graph_ && this->nIteratorId_ == nit.nIteratorId_);
     }
 
    private:
@@ -445,16 +469,14 @@ class Graph {
     size_type nIteratorId_;
     node_iterator(const Graph* graph,size_type nIteratorId):graph_(const_cast<Graph*>(graph)), nIteratorId_(nIteratorId){
     };
-  }; 
+  };
 
   node_iterator node_begin() const{
       return node_iterator(this, 0);
-      //return node_iterator(uid2node(this),i2u_.begin());
   }
 
   node_iterator node_end() const{
       return node_iterator(this, size());
-      //return node_iterator(uid2node(this),i2u_.end());
   }
 
 
@@ -481,14 +503,14 @@ class Graph {
     Edge operator*() const{
         return Edge(graph_,graph_->i2e_[eIteratorId_]);
     }
-    //2* Post-Increment Operator Fix
+
     edge_iterator& operator++(){
-        ++eIteratorId_;
+        eIteratorId_++;
         return *this;
     }
 
     bool operator==(const edge_iterator& eit) const {
-        return (this->eIteratorId_ == eit.eIteratorId_ && this->graph_ == eit.graph_);
+        return (this->graph_ == eit.graph_ && this->eIteratorId_ == eit.eIteratorId_);
     }
 
    private:
@@ -505,7 +527,7 @@ class Graph {
   }
 
   edge_iterator edge_end() const{
-    return edge_iterator(this, i2e_.size());
+    return edge_iterator(this, this->i2e_.size());
   }
 
 
@@ -531,9 +553,12 @@ class Graph {
     }
 
     Edge operator*() const{
+      //std::map<size_type,size_type>::iterator 
        auto it = graph_->adjmap_[thisnode_].begin();
-       std::advance(it,adjedgeId_);
-       return graph_->edge(it->second);
+	std::advance(it,adjedgeId_);
+       
+       size_type edgeIndex  =  it->second;
+       return graph_->edge(edgeIndex);
     }
 
     incident_iterator& operator++(){
@@ -542,7 +567,7 @@ class Graph {
     }
 
     bool operator==(const incident_iterator& it) const{
-        return (this->adjedgeId_ == it.adjedgeId_ && this->thisnode_ == it.thisnode_ && this->graph_ == it.graph_);
+        return (this->graph_ == it.graph_ && this->thisnode_ == it.thisnode_ && this->adjedgeId_ == it.adjedgeId_);
     }
 
    private:
@@ -558,33 +583,26 @@ class Graph {
 
  private:
      struct internal_node {
-      Point point_;   
-      size_type index_; 
-      node_value_type value_; 
-     };
-
-     struct internal_edge {
       size_type index_;
-      size_type node_a_;
-      size_type node_b_; 
-      edge_value_type value_;
-     };
-
-     struct uid2node{
-	graph_type* set_;
-	Node operator()(size_type uid){
-		return Node(set_,uid);
-	}
+      Point point_;   
+      node_value_type value_;
      };
 
      vector<internal_node> nodes_;
      vector<size_type> i2u_; 
+
+     struct internal_edge {
+      size_type node_a_; 
+      size_type node_b_; 
+      size_type index_;
+      edge_value_type value_;
+     };
+
      vector<internal_edge> edges_;
      vector<size_type> i2e_;
+
+     /* adjmap_[node_a_idx][node_b_idx] = edge_idx && O(1) Access Time */
      vector<map<size_type,size_type>> adjmap_; 
-
-
-     
 };
 
 #endif

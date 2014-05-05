@@ -14,6 +14,8 @@
 #include <fstream>
 
 #include "Mesh.hpp"
+#include <time.h>       /* clock_t, clock, CLOCKS_PER_SEC */
+
 // Standard gravity (average gravity at Earth's surface) in meters/sec^2
 static constexpr double grav = 9.80665;
 
@@ -283,6 +285,9 @@ int main(int argc, char* argv[])
     exit(1);
   }
 
+  clock_t timer_t;
+  timer_t = clock();
+
   MeshType mesh;
   // HW4B: Need node_type before this can be used!
 
@@ -374,7 +379,7 @@ int main(int argc, char* argv[])
   
   double dt = 0.25 * min_length.length() / (sqrt(grav * max_h.value().h));
   double t_start = 0;
-  double t_end = 10;
+  double t_end = 0.1;
 
   // Preconstruct a Flux functor
   EdgeFluxCalculator f;
@@ -398,6 +403,7 @@ int main(int argc, char* argv[])
     if (mesh.num_nodes() < 100)
       CS207::sleep(0.05);
   }
-
+  timer_t = clock() - timer_t;
+  printf ("It took me %d clicks (%f seconds).\n",timer_t,((float)timer_t)/CLOCKS_PER_SEC);
   return 0;
 }
