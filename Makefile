@@ -4,16 +4,13 @@
 #
 
 # Executables to build
-EXEC    += primes
 SDLEXEC += viewer
-EXEC += test_nodes
-EXEC += test_edges
-EXEC += mtl_test #Added
 SDLEXEC += subgraph
 SDLEXEC += shortest_path
 SDLEXEC += mass_spring
 SDLEXEC += poisson
 SDLEXEC += shallow_water
+SDLEXEC += cp_shallow_water
 
 # Get the shell name to determine the OS
 UNAME := $(shell uname)
@@ -35,17 +32,13 @@ DEPSFLAGS = -MD -MF $(DEPSFILE) #-MP
 
 # Define any directories containing header files
 #   To include directories use -Ipath/to/files
+
 #INCLUDES += -I.
 INCLUDES += -I. -I/usr/include #added
 #INCLUDES += -I. -I./MTL4/usr/include #added
 
 # Define CXX compile flags
-CXXFLAGS += -fopenmp -funroll-loops -O3 -W -Wall -Wextra -g
-# CXXFLAGS += -fopenmp -funroll-loops -O3 -W -Wall -Wextra -Wfatal-errors
-
-ifeq ($(PROFILE),1)
-CFLAGS := -g -pg
-endif
+CXXFLAGS += -fopenmp -funroll-loops -O3 -W -Wall -Wextra #-Wfatal-errors
 
 # Define any directories containing libraries
 #   To include directories use -Lpath/to/files
