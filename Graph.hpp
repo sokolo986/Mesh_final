@@ -11,8 +11,11 @@
 #include <algorithm>
 #include <vector>
 #include <cassert>
-#include <unordered_map>
 #include <map>
+//#include <boost/numeric/itl/iteration/basic_iteration.hpp>
+#include <boost/iterator/iterator_adaptor.hpp>
+
+
 using namespace std;
 
 
@@ -54,11 +57,12 @@ class Graph {
   /** Synonym for Edge (following STL conventions). */
   typedef Edge edge_type;
 
-  /** Type of indexes and sizes. Return type of Node::index() and
-      Graph::num_nodes(), argument type of Graph::node. */
+  /** Type of indexes and sizes. */
   typedef unsigned size_type;
 
-  typedef double value_type;
+  /** Type of Point operations. */
+  //typedef double value_type;
+  typedef typename Point::value_type value_type;
 
   /** Type of node iterators, which iterate over all graph nodes. */
   class node_iterator;
@@ -109,8 +113,7 @@ class Graph {
     }
 
     /* set position when given a point */
-    void set_position(const Point & p)
-    {
+    void set_position(const Point & p){
       fetch().point_ = p;
     }
 
@@ -407,11 +410,13 @@ class Graph {
 
   // ITERATORS
 
+  //typedef boost::transform_iterator<uid2node,std::vector<size_type>::const_iterator> node_iterator;
+  
   /** @class Graph::node_iterator
    * @brief Iterator class for nodes. A forward iterator. */
   class node_iterator :private totally_ordered<node_iterator>{
    public:
-    // These type definitions help us use STL's iterator_traits.
+    //These type definitions help us use STL's iterator_traits.
     /** Element type. */
     typedef Node value_type;
     /** Type of pointers to elements. */
@@ -422,6 +427,7 @@ class Graph {
     typedef std::input_iterator_tag iterator_category;
     /** Difference between iterators */
     typedef std::ptrdiff_t difference_type;
+    
 
     /** Construct an invalid node_iterator. */
     node_iterator() {
@@ -447,14 +453,16 @@ class Graph {
     size_type nIteratorId_;
     node_iterator(const Graph* graph,size_type nIteratorId):graph_(const_cast<Graph*>(graph)), nIteratorId_(nIteratorId){
     };
-  };
+  }; 
 
   node_iterator node_begin() const{
       return node_iterator(this, 0);
+      //return node_iterator(uid2node(this),i2u_.begin());
   }
 
   node_iterator node_end() const{
       return node_iterator(this, size());
+      //return node_iterator(uid2node(this),i2u_.end());
   }
 
 
@@ -579,6 +587,14 @@ class Graph {
 
      /* adjmap_[node_a_idx][node_b_idx] = edge_idx && O(1) Access Time */
      vector<map<size_type,size_type>> adjmap_; 
+
+
+     struct uid2node{
+	graph_type* set_;
+	operator()(size_type uid){
+		return Node(g_,uid);
+	}
+     }
 };
 
 #endif
