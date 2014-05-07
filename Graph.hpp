@@ -13,17 +13,19 @@
 #include <cassert>
 #include <unordered_map>
 #include <map>
+#include "omp.h"
+
 using namespace std;
 
 
 /** @class 	Graph
  * @brief 	A template for 3D undirected graphs
- * @tparam  V	The value type for a node 
+ * @tparam  V	The value type for a node
  *
  * A Graph is a set of Nodes and Edges s.t. G = <N,E> for N = <n_0,n_1,...n_m-1> and E = <e_0, e_1, .. e_d-1> where @a m == the number of valid nodes and @a d == the number of valid edges
  * A Node is a proxy for the abstract representation of the data passed into to it
  * An Edge connects two nodes s.t. <N_i,N_j> == <N_j,N_i> for all i,j in the set of valid Nodes for this Graph subject to !(i==j)
- * Users can add and retrieve nodes and edges. There is at most one edge between any pair of distinct nodes. 
+ * Users can add and retrieve nodes and edges. There is at most one edge between any pair of distinct nodes.
  * V describes a user-defined abstract representation of a node (i.e. Mass, Temperature, Weight).
  */
 template <typename V, typename E>
@@ -35,10 +37,10 @@ class Graph {
  public:
   /** Value type of a node. */
   typedef V node_value_type;
-  
+
   /** Value type of an edge. */
   typedef E edge_value_type;
-  
+
   /** Type of this graph. */
   typedef Graph graph_type;
 
@@ -141,7 +143,7 @@ class Graph {
             return true;
         return (this->uid_)< n.uid_;
     }
-    
+
     incident_iterator edge_begin() const{
         return incident_iterator(this->graph_, *this, 0);
     }
@@ -215,27 +217,30 @@ class Graph {
     this->adjmap_.erase(n);
   }
 
-  
+
   /*
   provide interface for parallel computing on all the node
   */
-  template<typename ITER, typename FUNC>
-  void applytoall(ITER ibegin, ITER iend, FUNC functor){
-  omp_set_num_threads(8);
+
+  template<typename FUNC, typename ITER>
+  void applytoall(ITER ibegin, ITER iend, FUNC& functor, int threads)
+  {
+  omp_set_num_threads(threads);
+
   #pragma omp parallel
   {
-	for (auto i = ibegin; i< iend; ++i)
+	for (auto i = ibegin; i!= iend; ++i)
 	{
 	#pragma omp single nowait
 	{
-		functor((*i));
+		functor(i);
 	}
 	}
-  
+
   }
   }
-  
-  
+
+
   /** Remove all nodes and edges from this graph.
    * @post num_nodes() == 0 && num_edges() == 0
    *
@@ -328,7 +333,7 @@ class Graph {
    */
   Edge edge(size_type i) const {
     assert(i < num_edges());
-    return Edge(this, i2e_[i]);       
+    return Edge(this, i2e_[i]);
   }
 
   /** Test whether two nodes are connected by an edge.
@@ -356,7 +361,7 @@ class Graph {
    */
   Edge add_edge(const Node& a, const Node& b, const edge_value_type& val = edge_value_type ()) {
 
-    
+
 	if (has_edge(a,b)){
 		return Edge(this,adjmap_[a.uid_][b.uid_]);
     }
@@ -366,7 +371,7 @@ class Graph {
 
     internal_edge newEdge{a.index(),b.index(),idx,val};
     edges_.push_back(newEdge);
-    i2e_.push_back(uid);    
+    i2e_.push_back(uid);
     adjmap_[a.uid_][b.uid_] = uid;
     adjmap_[b.uid_][a.uid_] = uid;
     return Edge(this,uid);
@@ -394,7 +399,7 @@ class Graph {
     if (has_edge(a,b)){
         size_type euid = adjmap_[a.uid_][b.uid_];
         i2e_.erase(Edge(this,euid).index());
-        adjmap_[a.uid_].erase(b.uid_); 
+        adjmap_[a.uid_].erase(b.uid_);
         adjmap_[b.uid_].erase(a.uid_);
         return 1;
     }else{
@@ -553,10 +558,10 @@ class Graph {
     }
 
     Edge operator*() const{
-      //std::map<size_type,size_type>::iterator 
+      //std::map<size_type,size_type>::iterator
        auto it = graph_->adjmap_[thisnode_].begin();
 	std::advance(it,adjedgeId_);
-       
+
        size_type edgeIndex  =  it->second;
        return graph_->edge(edgeIndex);
     }
@@ -584,16 +589,16 @@ class Graph {
  private:
      struct internal_node {
       size_type index_;
-      Point point_;   
+      Point point_;
       node_value_type value_;
      };
 
      vector<internal_node> nodes_;
-     vector<size_type> i2u_; 
+     vector<size_type> i2u_;
 
      struct internal_edge {
-      size_type node_a_; 
-      size_type node_b_; 
+      size_type node_a_;
+      size_type node_b_;
       size_type index_;
       edge_value_type value_;
      };
@@ -602,7 +607,7 @@ class Graph {
      vector<size_type> i2e_;
 
      /* adjmap_[node_a_idx][node_b_idx] = edge_idx && O(1) Access Time */
-     vector<map<size_type,size_type>> adjmap_; 
+     vector<map<size_type,size_type>> adjmap_;
 };
 
 #endif

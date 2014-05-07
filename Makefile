@@ -12,6 +12,8 @@ SDLEXEC += poisson
 SDLEXEC += shallow_water
 SDLEXEC += cp_shallow_water
 SDLEXEC += OPENMPshallow
+SDLEXEC += OPENMPshallow2
+SDLEXEC += openmp_mass_spring
 # Get the shell name to determine the OS
 UNAME := $(shell uname)
 

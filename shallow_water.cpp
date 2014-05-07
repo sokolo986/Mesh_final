@@ -285,8 +285,7 @@ int main(int argc, char* argv[])
     exit(1);
   }
 
-  clock_t timer_t;
-  timer_t = clock();
+auto start = std::chrono::high_resolution_clock::now();
 
   MeshType mesh;
   // HW4B: Need node_type before this can be used!
@@ -403,7 +402,10 @@ int main(int argc, char* argv[])
     if (mesh.num_nodes() < 100)
       CS207::sleep(0.05);
   }
-  timer_t = clock() - timer_t;
-  printf ("It took me %d clicks (%f seconds).\n",timer_t,((float)timer_t)/CLOCKS_PER_SEC);
-  return 0;
+auto elapsed = std::chrono::high_resolution_clock::now() - start;
+long long microseconds = std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
+
+cout << microseconds << endl;
+  
+return 0;
 }

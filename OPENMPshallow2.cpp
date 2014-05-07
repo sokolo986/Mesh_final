@@ -174,6 +174,71 @@ double hyperbolic_step(MESH& mesh, FLUX& f, double t, double dt) {
   // Step the finite volume model in time by dt.
   // Implement Equation 7 from your pseudocode here.
 
+
+
+
+  /*
+  provide interface for parallel computing on all the node
+  */
+
+  struct step{
+    double dt,t;
+    FLUX f;
+    MESH mesh;
+    step(double dt, double t, FLUX& f, MESH& mesh): dt(dt),t(t), f(f), mesh(mesh) {}
+    void operator()(MeshType::tri_iterator it){
+	// value function will return the flux
+	QVar total_flux=QVar(0,0,0);
+	QVar qm = QVar(0,0,0);
+	// iterate through 3 edges of a triangle
+	auto edgetemp = (*it).edge1();
+	for (int num = 0; num < 3; num++)
+	{
+		if (num ==0)
+			edgetemp= (*it).edge1();
+		else if (num==1)
+			edgetemp = (*it).edge2();
+		else
+			edgetemp = (*it).edge3();
+
+		if (  mesh.has_neighbor(edgetemp.index()) ) // it has a common triangle
+		{
+			auto nx =  ((*it).norm_vector(edgetemp)).x;
+			auto ny =  ((*it).norm_vector(edgetemp)).y;
+
+			// find the neighbour of a common edge
+			for (auto i = mesh.tri_edge_begin(edgetemp.index()); i != mesh.tri_edge_end(edgetemp.index()); ++i){
+				if (!(*i==*it))
+					qm = (*i).value();
+			}
+			// calculat the total flux
+			total_flux += f(nx, ny, dt, (*it).value(), qm);
+		}
+		else{
+			// when it doesnt have a neighbour shared with this edge
+			auto nx =  ((*it).norm_vector(edgetemp)).x;
+			auto ny =  ((*it).norm_vector(edgetemp)).y;
+			qm = QVar((*it).value().h, 0, 0 ); // approximation
+
+			total_flux += f(nx, ny, dt, (*it).value(), qm);
+		}
+	}
+
+	(*it).value() +=  total_flux * (- dt / (*it).area());
+
+    }
+  };
+
+  step step1(dt, t, f, mesh);
+  applytoall(mesh.tri_begin(),mesh.tri_end(), step1, 8);
+
+
+
+
+
+
+
+/*
 omp_set_num_threads(8);
 #pragma omp parallel
 {
@@ -222,7 +287,7 @@ omp_set_num_threads(8);
 	}
   }
  }
-
+*/
   return t + dt;
 }
 
@@ -241,6 +306,8 @@ void post_process(MESH& m) {
   // Translate the triangle-averaged values to node-averaged values
   // Implement Equation 8 from your pseudocode here
   	// iterate through all the nodes
+
+/*
 
 omp_set_num_threads(8);
 #pragma omp parallel
@@ -265,6 +332,35 @@ omp_set_num_threads(8);
   }
 
 }
+
+*/
+
+  struct post{
+
+    MESH m;
+    post(MESH& m): m(m) {}
+    void operator()(MeshType::node_iterator it){
+	QVar sum = QVar(0,0,0);
+	double sumTriArea = 0;
+	// for each node, iterate through its adjacent triangles
+
+	for (auto adji = m.vertex_begin((*it).index()); adji !=  m.vertex_end((*it).index()); ++ adji)
+	{
+		auto tri = (*adji);
+		sum += tri.area() * tri.value();
+		sumTriArea += tri.area();
+	}
+
+	(*it).value() = sum/sumTriArea; // update nodes value
+    }
+  };
+
+  post post(m,QVar);
+  applytoall(m.node_begin(),m.node_end(), post, 8);
+
+
+
+
 }
 
 
