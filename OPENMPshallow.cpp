@@ -174,7 +174,7 @@ double hyperbolic_step(MESH& mesh, FLUX& f, double t, double dt) {
   // Step the finite volume model in time by dt.
   // Implement Equation 7 from your pseudocode here.
 
-omp_set_num_threads(8);
+omp_set_num_threads(4);
 #pragma omp parallel
 {
   for (auto it = mesh.tri_begin(); it!=mesh.tri_end() ; ++it)
@@ -242,7 +242,7 @@ void post_process(MESH& m) {
   // Implement Equation 8 from your pseudocode here
   	// iterate through all the nodes
 
-omp_set_num_threads(8);
+omp_set_num_threads(4);
 #pragma omp parallel
 {
   for ( auto it = m.node_begin(); it!= m.node_end(); ++it)

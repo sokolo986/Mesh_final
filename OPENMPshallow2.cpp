@@ -230,7 +230,7 @@ double hyperbolic_step(MESH& mesh, FLUX& f, double t, double dt) {
   };
 
   step step1(dt, t, f, mesh);
-  applytoall(mesh.tri_begin(),mesh.tri_end(), step1, 8);
+  applytoall(mesh.tri_begin(),mesh.tri_end(), step1, 4);
 
 
 
@@ -291,8 +291,25 @@ omp_set_num_threads(8);
   return t + dt;
 }
 
+  struct post{
 
+    MeshType m;
+    post(MeshType& m): m(m) {}
+    void operator()(MeshType::node_iterator it){
+	QVar sum = QVar(0,0,0);
+	double sumTriArea = 0;
+	// for each node, iterate through its adjacent triangles
 
+	for (auto adji = m.vertex_begin((*it).index()); adji !=  m.vertex_end((*it).index()); ++ adji)
+	{
+		auto tri = (*adji);
+		sum += tri.area() * tri.value();
+		sumTriArea += tri.area();
+	}
+
+	(*it).value() = sum/sumTriArea; // update nodes value
+    }
+  };
 
 /** Convert the triangle-averaged values to node-averaged values for viewing. */
 template <typename MESH>
@@ -307,9 +324,9 @@ void post_process(MESH& m) {
   // Implement Equation 8 from your pseudocode here
   	// iterate through all the nodes
 
-/*
 
-omp_set_num_threads(8);
+
+omp_set_num_threads(4);
 #pragma omp parallel
 {
   for ( auto it = m.node_begin(); it!= m.node_end(); ++it)
@@ -333,30 +350,12 @@ omp_set_num_threads(8);
 
 }
 
-*/
 
-  struct post{
 
-    MESH m;
-    post(MESH& m): m(m) {}
-    void operator()(MeshType::node_iterator it){
-	QVar sum = QVar(0,0,0);
-	double sumTriArea = 0;
-	// for each node, iterate through its adjacent triangles
 
-	for (auto adji = m.vertex_begin((*it).index()); adji !=  m.vertex_end((*it).index()); ++ adji)
-	{
-		auto tri = (*adji);
-		sum += tri.area() * tri.value();
-		sumTriArea += tri.area();
-	}
 
-	(*it).value() = sum/sumTriArea; // update nodes value
-    }
-  };
-
-  post post(m,QVar);
-  applytoall(m.node_begin(),m.node_end(), post, 8);
+  //post post(m);
+  //applytoall(m.node_begin(),m.node_end(), post, 4);
 
 
 
