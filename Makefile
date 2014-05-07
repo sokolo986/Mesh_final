@@ -4,16 +4,25 @@
 #
 
 # Executables to build
-SDLEXEC += viewer
-SDLEXEC += subgraph
-SDLEXEC += shortest_path
-SDLEXEC += mass_spring
-SDLEXEC += poisson
-SDLEXEC += shallow_water
-SDLEXEC += cp_shallow_water
+#SDLEXEC += viewer
+#SDLEXEC += subgraph
+#SDLEXEC += mass_spring
+#SDLEXEC += shallow_water
+#SDLEXEC += test_nodes
+#SDLEXEC += test_edges
+#SDLEXEC += test
+
+#SDLEXEC += viewer
+#SDLEXEC += subgraph
+#SDLEXEC += shortest_path
+#SDLEXEC += mass_spring
+#SDLEXEC += poisson
+#SDLEXEC += shallow_water
+#SDLEXEC += cp_shallow_water
 SDLEXEC += OPENMPshallow
 SDLEXEC += OPENMPshallow2
 SDLEXEC += openmp_mass_spring
+
 # Get the shell name to determine the OS
 UNAME := $(shell uname)
 
@@ -36,23 +45,23 @@ DEPSFLAGS = -MD -MF $(DEPSFILE) #-MP
 #   To include directories use -Ipath/to/files
 
 #INCLUDES += -I.
-INCLUDES += -I. -I/usr/include #added
-#INCLUDES += -I. -I./MTL4/usr/include #added
+INCLUDES += -I. -I/usr/include -I/usr/include/libxml2 #added
+INCLUDES += -I./mlpack-1.0.8/build/include #added
 
 # Define CXX compile flags
 CXXFLAGS += -fopenmp -funroll-loops -O3 -W -Wall -Wextra #-Wfatal-errors
 
 # Define any directories containing libraries
 #   To include directories use -Lpath/to/files
-LDFLAGS +=
+LDFLAGS += -L./mlpack-1.0.8/build/lib
 
 # Define any libraries to link into executable
 #   To link in libraries (libXXX.so or libXXX.a) use -lXXX
 ifeq ($(UNAME), Linux)
-LDLIBS += -lSDL -lGL -lGLU
+LDLIBS += -lSDL -lGL -lGLU -lmlpack
 endif
 ifeq ($(UNAME), Darwin)
-LDLIBS += -framework SDL -framework OpenGL -framework Cocoa
+LDLIBS += -framework SDL -framework OpenGL -framework Cocoa -lmlpack
 endif
 
 ##################

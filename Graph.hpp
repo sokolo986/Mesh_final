@@ -7,14 +7,14 @@
 
 #include "CS207/Util.hpp"
 #include "Point.hpp"
-
 #include <algorithm>
 #include <vector>
 #include <cassert>
 #include <unordered_map>
 #include <map>
+#include <mlpack/core.hpp>
+#include <mlpack/methods/neighbor_search/neighbor_search.hpp>
 #include "omp.h"
-
 using namespace std;
 
 
@@ -27,13 +27,17 @@ using namespace std;
  * An Edge connects two nodes s.t. <N_i,N_j> == <N_j,N_i> for all i,j in the set of valid Nodes for this Graph subject to !(i==j)
  * Users can add and retrieve nodes and edges. There is at most one edge between any pair of distinct nodes.
  * V describes a user-defined abstract representation of a node (i.e. Mass, Temperature, Weight).
+>>>>>>> 1edfe42f366f484fd0d5c793774f24717b3503aa
  */
 template <typename V, typename E>
 class Graph {
  private:
+   friend class NodeSortPolicy;
    struct internal_node;
    struct internal_edge;
-
+   //class NodeMetric;
+   //typedef typename mlpack::metric MetricType;
+   class NodeMetric;
  public:
   /** Value type of a node. */
   typedef V node_value_type;
@@ -71,6 +75,13 @@ class Graph {
   /** Type of incident iterators, which iterate incident edges to a node. */
   class incident_iterator;
 
+  /** Nearest Neighbor Objects */
+  //class NodeSortPolicy;
+  //class NearestNeighbor;
+  //typedef typename mlpack::neighbor::NearestNeighborSort NodeSortPolicy;
+  //typedef typename mlpack::tree::BinarySpaceTree< mlpack::bound::BallBound<arma::vec> > bst;
+
+  
 
   // CONSTRUCTOR AND DESTRUCTOR ----------------------
 
@@ -80,6 +91,136 @@ class Graph {
 
   /** Default destructor */
   ~Graph() = default;
+
+  /*class NodeSortPolicy{
+   private:
+    friend class Graph;
+    Graph* set_;
+   
+    NodeSortPolicy(const Graph* graph): set_(const_cast<Graph*>(graph)){
+    }
+
+   public:
+	NodeSortPolicy(){
+	}
+
+	double BestDistance(){
+		return 0.0;
+	}
+
+	template<typename TreeType>
+	double BestNodeToNodeDistance (const TreeType* queryNode, const TreeType* referenceNode){
+		auto qn = Node(set_,(*queryNode));
+		auto rn = Node(set_,(*referenceNode));
+		if (set_->hasEdge(qn,rn) and qn!=rn)
+			return norm(qn.position()-rn.position()); 
+		else
+			return -1;
+	}
+
+	template<typename TreeType>
+	double 	BestNodeToNodeDistance (const TreeType* queryNode, const TreeType* referenceNode, const double centerToCenterDistance){
+		auto qn = Node(set_,(*queryNode));
+		auto rn = Node(set_,(*referenceNode));
+		if (set_->hasEdge(qn,rn) and qn!=rn)
+			return centerToCenterDistance;
+		else
+			return -1.0;
+	}
+
+	template<typename TreeType>
+	static double 	BestNodeToNodeDistance (const TreeType* queryNode, const TreeType* referenceNode, const TreeType *referenceChildNode, const double centerToCenterDistance){
+		//TreeType::ParentDistance() must be implemented to use this.
+		if (centerToCenterDistance==-1)
+			return BestNodeToNodeDistance (queryNode,referenceChildNode);
+		else{
+			if (std::min(BestNodeToNodeDistance (queryNode,referenceChildNode),centerToCenterDistance) == -1)
+				return centerToCenterDistance;
+			else
+				return std::min(BestNodeToNodeDistance (queryNode,referenceChildNode),centerToCenterDistance);
+		}
+	}
+
+	template<typename TreeType>
+	static double 	BestPointToNodeDistance (const arma::vec &queryPoint, const TreeType *referenceNode){
+		auto rn = Node(set_,(*referenceNode));
+		return norm(queryPoint-referenceNode->position());
+	}
+
+	template<typename TreeType>
+	static double 	BestPointToNodeDistance (const arma::vec &queryPoint, const TreeType* referenceNode, const double pointToCenterDistance){
+		if (BestPointToNodeDistance (queryPoint, referenceNode)==-1)
+			return pointToCenterDistance;
+		else{
+			return std::min(pointToCenterDistance,norm(queryPoint-referenceNode->position())); 
+		}
+	}
+
+	static double CombineBest (const double a, const double b){
+		if (a == -1 || b == -1)
+			return	std::max(a,b);	
+		return std::abs(a-b);
+	}
+	
+	static double CombineWorst (const double a, const double b){
+		if (a == DBL_MAX || b == DBL_MAX)
+		       return DBL_MAX;
+		return a + b;
+	}
+
+	static bool IsBetter (const double value, const double ref){
+		return (value!=-1 && ref!=-1) && value<ref;
+	}
+
+	static size_t SortDistance (const arma::vec &list, double newDistance){
+		//return the index in the vector where hte new distance should be inserted
+		if (newDistance==-1)
+			return list.size()-1;
+		else{
+			for (auto list_it = list.begin(); list_it!=list.end(); ++list_it){
+				if ((*list_it)<newDistance)
+					return (list_it-list.begin());
+			}
+			
+		}
+				  
+	}
+
+	static double WorstDistance (){
+		return DBL_MAX;
+	}
+    };*/
+   
+    /*class NearestNeighbor{
+	private:
+	   friend class Graph;
+	   friend class Node;
+	   arma::Mat<size_type> neighbors_;
+           arma::mat distances_;
+	   
+	   NearestNeighbor(const Graph* set){
+		//typedef NeighborSearch<NearestNeighborSort, mlpack::metric::EuclideanDistance> nn;
+				
+		//NeighborSearch<Graph::NodeSortPolicy, Graph::NodeMetric{set}> n_;
+		//Graph::NodeMetric MetricPolicy{set};
+		NeighborSearch<NearestNeighborSort,Graph::NodeMetric(set)> my_nn;
+
+		my_nn a(arma::conv_to<arma::mat>::from((const_cast<Graph*>(set))->i2u_);
+	        a.Search(1, neighbors_, distances_);
+    	   }
+
+	public:
+      	   NearestNeighbor(){
+	   }
+	
+	   const arma::Mat<size_type>& getNeighbors(){
+		return neighbors_;
+	   }
+
+	   const arma::mat& getDistances(){
+	   	return distances_;
+	   }
+    };*/
 
   // NODES
 
@@ -151,6 +292,10 @@ class Graph {
     incident_iterator edge_end() const{
         return incident_iterator(this->graph_, *this, graph_->adjmap_[uid_].size());
     }
+
+    /*Graph::NearestNeighbor nn(){
+    	return NearestNeighbor(graph_);
+    }*/
   };
 
   /** Return the number of nodes in the graph.
@@ -605,9 +750,28 @@ class Graph {
 
      vector<internal_edge> edges_;
      vector<size_type> i2e_;
+     //vector<map<size_type,size_type>> adjmap_; 
+
+     class NodeMetric{
+        private:
+		Graph* set_;
+        public:
+	  NodeMetric(Graph* set):set_(const_cast<Graph*>(set)){
+	  }
+	
+	  template<typename VecType1, typename VecType2>
+  	  double Evaluate(const VecType1& a, const VecType2& b){
+		if (hasEdge(Node(set_,(*a)),Node(set_,(*b))))
+			return norm(Node(set_,(*a)).position()-Node(set_,(*b)).position());
+		else
+			return DBL_MAX;
+          }
+      };
+     
 
      /* adjmap_[node_a_idx][node_b_idx] = edge_idx && O(1) Access Time */
      vector<map<size_type,size_type>> adjmap_;
 };
+
 
 #endif
