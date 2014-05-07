@@ -10,7 +10,18 @@
 #SDLEXEC += shallow_water
 #SDLEXEC += test_nodes
 #SDLEXEC += test_edges
-SDLEXEC += test
+#SDLEXEC += test
+
+#SDLEXEC += viewer
+#SDLEXEC += subgraph
+#SDLEXEC += shortest_path
+#SDLEXEC += mass_spring
+#SDLEXEC += poisson
+#SDLEXEC += shallow_water
+#SDLEXEC += cp_shallow_water
+SDLEXEC += OPENMPshallow
+SDLEXEC += OPENMPshallow2
+SDLEXEC += openmp_mass_spring
 
 # Get the shell name to determine the OS
 UNAME := $(shell uname)

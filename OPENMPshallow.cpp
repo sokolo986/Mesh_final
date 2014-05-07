@@ -12,15 +12,16 @@
 #include "CS207/Color.hpp"
 #include "Point.hpp"
 #include <fstream>
-
+#include "omp.h"
 #include "Mesh.hpp"
 #include <time.h>       /* clock_t, clock, CLOCKS_PER_SEC */
+#include <chrono>
 
 // Standard gravity (average gravity at Earth's surface) in meters/sec^2
 static constexpr double grav = 9.80665;
 
 /** Water column characteristics */
-typedef struct QVar { 
+typedef struct QVar {
   double h;	  // Height of fluid
   double hu;	// Height times average x velocity of column
   double hv;	// Height times average y velocity of column
@@ -35,8 +36,8 @@ typedef struct QVar {
   QVar(double h_, double hu_, double hv_)
     : h(h_), hu(hu_), hv(hv_) {
   }
-  
-  
+
+
   QVar operator+(const QVar& q){
 	double hnew = h+q.h;
 	double hunew = hu+q.hu;
@@ -44,15 +45,15 @@ typedef struct QVar {
 	//return QVar(h+q.h, hu + q.hu, hv + q.hv);
 	return QVar(hnew, hunew, hvnew);
   }
-  
+
   QVar operator-(const QVar& q){
 	return QVar(h-q.h, hu - q.hu, hv - q.hv);
-  }  
-  
+  }
 
-  
+
+
   bool operator==(const QVar& q) const {
-    if (h==q.h && hu==q.hu && hv == q.hv) 
+    if (h==q.h && hu==q.hu && hv == q.hv)
 		return false;
 	else
 		return true;
@@ -60,7 +61,7 @@ typedef struct QVar {
   bool operator!=(const QVar& q) const {
     return !(*this == q);
   }
-  
+
   QVar& operator=(const QVar& q){
 	h = q.h;
 	hu = q.hu;
@@ -71,19 +72,19 @@ typedef struct QVar {
   QVar operator* (double n){
 	return QVar(h*n, hu*n, hv*n);
   }
-  
+
   QVar operator/ (double n){
 	return QVar(h/n, hu/n, hv/n);
-  
+
   }
-  
+
   QVar& operator+=(const QVar& b) {
     h+=b.h;
 	hu += b.hu;
 	hv += b.hv;
     return *this;
   }
-  
+
   QVar& operator-=(const QVar& b) {
     h -=b.h;
 	hu -= b.hu;
@@ -96,7 +97,7 @@ typedef struct QVar {
 
 
 QVar operator*(double n, QVar& q){
-	return QVar(n*q.h,n*q.hu,n*q.hv);  
+	return QVar(n*q.h,n*q.hu,n*q.hv);
 }
 
 QVar operator/(double n,QVar& q) {
@@ -165,7 +166,7 @@ template <typename MESH, typename FLUX>
 /*
  * implementation of euler approximation of the shallow water PDE
  * @pre: a valid Mesh class instance @mesh
- * @post: all triangle in the mesh class have new value() = old value - dt/area() * total flux, 
+ * @post: all triangle in the mesh class have new value() = old value - dt/area() * total flux,
 		  where total flux is calculated by all three edges of the triangle
    @return: return total time t+dt
 */
@@ -173,7 +174,12 @@ double hyperbolic_step(MESH& mesh, FLUX& f, double t, double dt) {
   // Step the finite volume model in time by dt.
   // Implement Equation 7 from your pseudocode here.
 
+omp_set_num_threads(8);
+#pragma omp parallel
+{
   for (auto it = mesh.tri_begin(); it!=mesh.tri_end() ; ++it)
+  {
+  #pragma omp single nowait
   {
 	// value function will return the flux
 	QVar total_flux=QVar(0,0,0);
@@ -181,21 +187,21 @@ double hyperbolic_step(MESH& mesh, FLUX& f, double t, double dt) {
 	// iterate through 3 edges of a triangle
 	auto edgetemp = (*it).edge1();
 	for (int num = 0; num < 3; num++)
-	{	
+	{
 		if (num ==0)
 			edgetemp= (*it).edge1();
 		else if (num==1)
 			edgetemp = (*it).edge2();
-		else	
+		else
 			edgetemp = (*it).edge3();
-			
+
 		if (  mesh.has_neighbor(edgetemp.index()) ) // it has a common triangle
 		{
 			auto nx =  ((*it).norm_vector(edgetemp)).x;
 			auto ny =  ((*it).norm_vector(edgetemp)).y;
-			
+
 			// find the neighbour of a common edge
-			for (auto i = mesh.tri_edge_begin(edgetemp.index()); i != mesh.tri_edge_end(edgetemp.index()); ++i){	
+			for (auto i = mesh.tri_edge_begin(edgetemp.index()); i != mesh.tri_edge_end(edgetemp.index()); ++i){
 				if (!(*i==*it))
 					qm = (*i).value();
 			}
@@ -211,11 +217,12 @@ double hyperbolic_step(MESH& mesh, FLUX& f, double t, double dt) {
 			total_flux += f(nx, ny, dt, (*it).value(), qm);
 		}
 	}
-	
+
 	(*it).value() +=  total_flux * (- dt / (*it).area());
+	}
   }
-  
-  
+ }
+
   return t + dt;
 }
 
@@ -224,7 +231,7 @@ double hyperbolic_step(MESH& mesh, FLUX& f, double t, double dt) {
 
 /** Convert the triangle-averaged values to node-averaged values for viewing. */
 template <typename MESH>
-/*	
+/*
  * post process of a mesh instance to update the values of all the nodes values
  * @pre: a valid mesh instance
  * @post: update the nodes values based on approximation of the average of neighbours values
@@ -234,22 +241,30 @@ void post_process(MESH& m) {
   // Translate the triangle-averaged values to node-averaged values
   // Implement Equation 8 from your pseudocode here
   	// iterate through all the nodes
+
+omp_set_num_threads(8);
+#pragma omp parallel
+{
   for ( auto it = m.node_begin(); it!= m.node_end(); ++it)
   {
-	
+  #pragma omp single nowait
+  {
 	QVar sum = QVar(0,0,0);
 	double sumTriArea = 0;
 	// for each node, iterate through its adjacent triangles
-	
+
 	for (auto adji = m.vertex_begin((*it).index()); adji !=  m.vertex_end((*it).index()); ++ adji)
 	{
 		auto tri = (*adji);
 		sum += tri.area() * tri.value();
-		sumTriArea += tri.area();  
+		sumTriArea += tri.area();
 	}
 
 	(*it).value() = sum/sumTriArea; // update nodes value
   }
+  }
+
+}
 }
 
 
@@ -257,7 +272,7 @@ struct EdgeComparator {
   /** Struct/Class of comparator to compare edge length
   * @param[in] two triangle objects
   * @param[out] boolean, true if the first triangle has the smallest edge length than the second triangle
-  */ 
+  */
    template <typename Edge>
    bool operator()(const Edge& t1, const Edge& t2) const {
 	return t1.length() < t2.length();
@@ -265,10 +280,10 @@ struct EdgeComparator {
 }EdgeComparator;
 
 struct HeightComparator {
-  /** Struct/Class of comparator to compare height value stored in Node 
+  /** Struct/Class of comparator to compare height value stored in Node
   * @param[in] two Node objects
   * @param[out] boolean, true if the height in first Node value  is smaller than  height in Second Node value
-  */ 
+  */
    template <typename Node>
    bool operator()(const Node& t1, const Node& t2) const {
 	return t1.value().h < t2.value().h;
@@ -285,10 +300,12 @@ int main(int argc, char* argv[])
     exit(1);
   }
 
-auto start = std::chrono::high_resolution_clock::now();
-
   MeshType mesh;
   // HW4B: Need node_type before this can be used!
+  omp_set_num_threads(4);
+
+auto start = std::chrono::high_resolution_clock::now();
+
 
   std::vector<typename MeshType::node_type> mesh_node;
 
@@ -335,22 +352,36 @@ auto start = std::chrono::high_resolution_clock::now();
 	}
   }
   else if (dam){
+
+omp_set_num_threads(8);
+#pragma omp parallel
+{
 	for ( auto it = mesh.node_begin(); it!= mesh.node_end(); ++it){
+	#pragma omp single nowait
+	{
 		auto x = (*it).position().x;
 		int H =0;
 		if (x < 0)
 			H = 1;
 		mesh.value((*it), QVar(1+0.75*H,0,0));
 	}
-  }
-  
-  
-  // Perform any needed precomputation
-// initialize triangle
-  for (auto it = mesh.tri_begin(); it != mesh.tri_end(); ++it ) {
-	(*it).value() = ((*it).node1().value() + (*it).node2().value() + (*it).node3().value())/3.0;
+	}
+}
   }
 
+
+  // Perform any needed precomputation
+// initialize triangle
+//omp_set_num_threads(4);
+#pragma omp parallel
+{
+  for (auto it = mesh.tri_begin(); it < mesh.tri_end(); ++it ) {
+  	#pragma omp single nowait
+  {
+	(*it).value() = ((*it).node1().value() + (*it).node2().value() + (*it).node3().value())/3.0;
+  }
+  }
+}
 
   // Launch the SDLViewer
   CS207::SDLViewer viewer;
@@ -358,14 +389,14 @@ auto start = std::chrono::high_resolution_clock::now();
 
   // HW4B: Need to define Mesh::node_type and node/edge iterator
   // before these can be used!
-  
+
   auto node_map = viewer.empty_node_map(mesh);
   viewer.add_nodes(mesh.node_begin(), mesh.node_end(),
                    CS207::DefaultColor(), NodePosition(), node_map);
   viewer.add_edges(mesh.edge_begin(), mesh.edge_end(), node_map);
 
   viewer.center_view();
-  
+
   // HW4B: Timestep
   // CFL stability condition requires dt <= dx / max|velocity|
   // For the shallow water equations with u = v = 0 initial conditions
@@ -373,9 +404,9 @@ auto start = std::chrono::high_resolution_clock::now();
   //   to set the time-step
   // Compute the minimum edge length and maximum water height for computing dt
   auto min_length = *std::min_element(mesh.edge_begin(), mesh.edge_end(), EdgeComparator);
-  
+
   auto max_h = *std::max_element(mesh.node_begin(), mesh.node_end(), HeightComparator);
-  
+
   double dt = 0.25 * min_length.length() / (sqrt(grav * max_h.value().h));
   double t_start = 0;
   double t_end = 0.1;
@@ -396,7 +427,7 @@ auto start = std::chrono::high_resolution_clock::now();
     viewer.add_nodes(mesh.node_begin(), mesh.node_end(),
                      CS207::DefaultColor(), NodePosition(), node_map);
     viewer.set_label(t);
-	
+
     // These lines slow down the animation for small meshes.
     // Feel free to remove them or tweak the constants.
     if (mesh.num_nodes() < 100)
@@ -406,6 +437,6 @@ auto elapsed = std::chrono::high_resolution_clock::now() - start;
 long long microseconds = std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
 
 cout << microseconds << endl;
-  
-return 0;
+
+  return 0;
 }

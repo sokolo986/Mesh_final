@@ -24,10 +24,10 @@ class Mesh {
     struct tri_info_type;
     typedef Graph<N,E> GraphType;
  public:
-  
+
   /** Template type of a Vertex of the Triangle **/
   typedef N node_value_type;
-  
+
   /** Template type of a Edge of the Triangle . */
   typedef E edge_value_type;
 
@@ -106,7 +106,7 @@ class Mesh {
   /** Returns the node at index i in the mesh. */
   Node node(size_type i) {
 	return this->graph_.node(i);
-  }  
+  }
 
   /** Returns the edge at index i in the mesh. */
   Edge edge(size_type i) {
@@ -177,7 +177,7 @@ class Mesh {
    private:
         friend class Mesh;
 	Mesh* set_;
-	size_type idx_;  
+	size_type idx_;
 
 	/** Returns a reference to the Triangle */
 	tri_info_type& fetch() const{
@@ -196,7 +196,7 @@ class Mesh {
 			return node2();
 		return node3();
 	}
-	
+
    public:
     /** Constructs an invalid triangle */
     Triangle(){
@@ -211,13 +211,13 @@ class Mesh {
     const Point& position() const {
 	return (node1().position()+node2().position()+node3.position())/3;
     }
-	
+
     /** Returns this triangle's area.  */
     value_type area() const{
 	Point A = node1().position();
 	Point B = node2().position();
 	Point C = node3().position();
-	return abs( (A.x *(B.y-C.y) + B.x*(C.y - A.y)+ C.x*(A.y-B.y))/2.0);		
+	return abs( (A.x *(B.y-C.y) + B.x*(C.y - A.y)+ C.x*(A.y-B.y))/2.0);
     }
 
     /** Returns a reference to this triangle's value */
@@ -231,7 +231,7 @@ class Mesh {
     }
 
     /** Calculates the normal vector between two adjacent triangles. */
-    Point norm_vector(const Triangle& t1){	
+    Point norm_vector(const Triangle& t1){
 	if (!t1.has_node(node1()))
 	{
 		auto dx =node2().position().x - node3().position().x;
@@ -261,19 +261,19 @@ class Mesh {
 		}
 		return Normal;
 	}
-	
+
     }
 
 	/** Returns the normal vector of an Edge */
-	Point norm_vector(const Edge& e){	  
+	Point norm_vector(const Edge& e){
 	  if (e.node1() != node1() && e.node2() != node1())
 	  {
 		auto dx =node2().position().x - node3().position().x;
 		auto dy =node2().position().y - node3().position().y;
 		Point Normal = Point(-dy, dx, 0);
-	
+
 		Point outside = node1().position() - node2().position();
-	
+
 		if(dot(outside, Normal) > 0)
 			Normal *= -1.0;
 		return Normal;
@@ -284,24 +284,24 @@ class Mesh {
 		auto dy =node1().position().y - node3().position().y;
 		Point Normal = Point(-dy, dx, 0);
 		Point outside = node2().position() - node1().position();
-	
+
 		if(dot(outside, Normal) > 0)
 			Normal *= -1.0;
-		
+
 		return Normal;
 	  }
 	  else {
 		auto dx =node1().position().x - node2().position().x;
 		auto dy =node1().position().y - node2().position().y;
 		Point Normal = Point(-dy, dx, 0);
-	
+
 		Point outside = node3().position() - node2().position();
-	
+
 		if(dot(outside, Normal) > 0)
 			Normal *= -1.0;
 		return Normal;
 	  }
-	 
+
 	}
 
     /** Returns the adjacent triangles to this node */
@@ -316,7 +316,7 @@ class Mesh {
 
     /** Determines if a triangle has a particular node */
     bool has_node(Node& n1){
-        return (fetch().n1_==n1.index() or fetch().n2_==n1.index() or fetch().n3_==n1.index()); 
+        return (fetch().n1_==n1.index() or fetch().n2_==n1.index() or fetch().n3_==n1.index());
     }
 
     /** Returns the node of this triangle  */
@@ -361,6 +361,13 @@ class Mesh {
 
   };
 
+    /*
+  provide interface for parallel computing on all the node
+  */
+
+
+
+
     /** Returns a node's value */
     node_value_type& value(Node n, node_value_type value){
 	n.value() = value;
@@ -371,8 +378,8 @@ class Mesh {
     const N& value(const Node& n) const{
 	return n.value();
     }
-   
-    /** Returns a vectors of all adjacent triangles */	
+
+    /** Returns a vectors of all adjacent triangles */
     std::vector<Point> adjacent_triangle_vector(const Triangle& t){
 	return t.adj_triangle_vector();
     }
@@ -394,7 +401,7 @@ class Mesh {
 	}
 	return tri;
     }
-  
+
   /** Returns the number of triangles in the mesh.  */
   size_type size() const {
 	return this->triangles_.size();
@@ -421,27 +428,27 @@ class Mesh {
 
 	/* Triangle index */
 	size_type tri_idx = size();
-	
+
 	/* Edges */
 	edge_type e1 = this->graph_.add_edge(n1, n2);
 	edge_type e2 = this->graph_.add_edge(n1, n3);
 	edge_type e3 = this->graph_.add_edge(n2, n3);
-		
+
 	/*Update tri data*/
 	tri_info_type tri{this,n1.index(),n2.index(),n3.index(),e1.index(),e2.index(),e3.index(),tri_value_type(),tri_idx};
 	this->triangles_.push_back(tri);
-	
-	//udpdate edge_lookup table	
+
+	//udpdate edge_lookup table
 	edge_lookup_[e1.index()].push_back(tri_idx);
 	edge_lookup_[e2.index()].push_back(tri_idx);
 	edge_lookup_[e3.index()].push_back(tri_idx);
-	
+
 	node_lookup_[n1.index()].push_back(tri_idx);
 	node_lookup_[n2.index()].push_back(tri_idx);
 	node_lookup_[n3.index()].push_back(tri_idx);
-		
-	return this->triangle(tri_idx); 
-  } 
+
+	return this->triangle(tri_idx);
+  }
 
 
   /** Iterates over all triangles. */
@@ -480,6 +487,14 @@ class Mesh {
 	++idx_;
 	return *this;
     }
+    tri_iterator& operator--(){
+        --idx_;
+        return *this;
+    }
+    tri_iterator& operator-(tri_iterator& a){
+        idx_= idx_ - a.idx_;
+        return *this;
+    }
 
     /** Test the equality of an iterator based on current position.  */
     bool operator==(const tri_iterator& a) const{
@@ -490,7 +505,7 @@ class Mesh {
     bool operator<(const tri_iterator& a) const{
 	return idx_<a.idx_ ;
     }
-   
+
   };
 
 
@@ -541,7 +556,7 @@ class Mesh {
     bool operator<(const vertex_iterator& a) const{
 	return nidx_<a.nidx_;
     }
-   
+
   };
 
   /** Iterates over all triangles incident to a node. */
@@ -591,25 +606,25 @@ class Mesh {
     bool operator<(const tri_edge_iterator& a) const{
 	return idx_<a.idx_;
     }
-   
+
   };
-  
+
   private:
 
 	/* Stores Graph Information */
 	typename GraphType::graph_type graph_;
-	
+
 	/** Lookup tables */
   	map<size_type, vector<size_type> > edge_lookup_;
   	map<size_type, vector<size_type> > node_lookup_;
 
 	/*indexed by node UID. Stores triangles data.**/
-	std::vector<tri_info_type> triangles_; 
+	std::vector<tri_info_type> triangles_;
 
 	/** Stores Triangle Information */
 	struct tri_info_type {
 		Mesh* set_;
-		
+
 		size_type n1_;
 		size_type n2_;
 		size_type n3_;
@@ -623,4 +638,20 @@ class Mesh {
 	};
 
 };
+  template<typename FUNC, typename ITER>
+  void applytoall(ITER ibegin, ITER iend, FUNC& functor, int threads)
+  {
+  omp_set_num_threads(threads);
 
+  #pragma omp parallel
+  {
+	for (auto i = ibegin; i!= iend; ++i)
+	{
+	#pragma omp single nowait
+	{
+		functor(i);
+	}
+	}
+
+  }
+  }
