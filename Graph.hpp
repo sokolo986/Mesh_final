@@ -78,8 +78,8 @@ class Graph {
   /** Nearest Neighbor Objects */
   //class NodeSortPolicy;
   //class NearestNeighbor;
-  typedef typename mlpack::neighbor::NearestNeighborSort NodeSortPolicy;
-  typedef typename mlpack::tree::BinarySpaceTree< mlpack::bound::BallBound<arma::vec> > bst;
+  //typedef typename mlpack::neighbor::NearestNeighborSort NodeSortPolicy;
+  //typedef typename mlpack::tree::BinarySpaceTree< mlpack::bound::BallBound<arma::vec> > bst;
 
   
 
@@ -191,7 +191,7 @@ class Graph {
 	}
     };*/
    
-    class NearestNeighbor{
+    /*class NearestNeighbor{
 	private:
 	   friend class Graph;
 	   friend class Node;
@@ -220,7 +220,7 @@ class Graph {
 	   const arma::mat& getDistances(){
 	   	return distances_;
 	   }
-    };
+    };*/
 
   // NODES
 
@@ -293,9 +293,9 @@ class Graph {
         return incident_iterator(this->graph_, *this, graph_->adjmap_[uid_].size());
     }
 
-    Graph::NearestNeighbor nn(){
+    /*Graph::NearestNeighbor nn(){
     	return NearestNeighbor(graph_);
-    }
+    }*/
   };
 
   /** Return the number of nodes in the graph.
