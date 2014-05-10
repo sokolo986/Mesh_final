@@ -638,6 +638,7 @@ class Mesh {
 	};
 
 };
+/*
   template<typename FUNC, typename ITER>
   void applytoall(ITER ibegin, ITER iend, FUNC& functor, int threads)
   {
@@ -656,4 +657,4 @@ class Mesh {
   }
   }
 
-
+*/

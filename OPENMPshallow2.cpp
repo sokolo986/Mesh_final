@@ -20,6 +20,24 @@
 // Standard gravity (average gravity at Earth's surface) in meters/sec^2
 static constexpr double grav = 9.80665;
 
+  template<typename FUNC, typename ITER>
+  inline void applytoall(ITER ibegin, ITER iend, FUNC& functor, int threads)
+  {
+
+  omp_set_num_threads(4);
+  #pragma omp parallel
+  {
+	for (auto i = ibegin; i!= iend; ++i)
+	{
+	#pragma omp single nowait
+	{
+		functor(i);
+	}
+	}
+
+  }
+  }
+
 /** Water column characteristics */
 typedef struct QVar {
   double h;	  // Height of fluid
@@ -180,13 +198,13 @@ double hyperbolic_step(MESH& mesh, FLUX& f, double t, double dt) {
   /*
   provide interface for parallel computing on all the node
   */
-
+/*
   struct step{
     double dt,t;
     FLUX f;
     MESH mesh;
-    step(double dt, double t, FLUX& f, MESH& mesh): dt(dt),t(t), f(f), mesh(mesh) {}
-    void operator()(MeshType::tri_iterator it){
+    inline step(double dt, double t, FLUX& f, MESH& mesh): dt(dt),t(t), f(f), mesh(mesh) {}
+    inline void operator()(MeshType::tri_iterator& it){
 	// value function will return the flux
 	QVar total_flux=QVar(0,0,0);
 	QVar qm = QVar(0,0,0);
@@ -231,6 +249,7 @@ double hyperbolic_step(MESH& mesh, FLUX& f, double t, double dt) {
 
   step step1(dt, t, f, mesh);
   applytoall(mesh.tri_begin(),mesh.tri_end(), step1, 4);
+*/
 
 
 
@@ -238,7 +257,6 @@ double hyperbolic_step(MESH& mesh, FLUX& f, double t, double dt) {
 
 
 
-/*
 omp_set_num_threads(8);
 #pragma omp parallel
 {
@@ -287,15 +305,18 @@ omp_set_num_threads(8);
 	}
   }
  }
-*/
+
   return t + dt;
 }
 
-  struct post{
+ struct post{
 
     MeshType m;
     post(MeshType& m): m(m) {}
-    void operator()(MeshType::node_iterator it){
+    void operator()(MeshType::node_iterator& it);
+  };
+
+ inline void post::operator()(MeshType::node_iterator& it){
 	QVar sum = QVar(0,0,0);
 	double sumTriArea = 0;
 	// for each node, iterate through its adjacent triangles
@@ -309,7 +330,7 @@ omp_set_num_threads(8);
 
 	(*it).value() = sum/sumTriArea; // update nodes value
     }
-  };
+
 
 /** Convert the triangle-averaged values to node-averaged values for viewing. */
 template <typename MESH>
@@ -353,9 +374,8 @@ omp_set_num_threads(4);
 
 
 
-
-  //post post(m);
-  //applytoall(m.node_begin(),m.node_end(), post, 4);
+//  post post(m);
+//  applytoall(m.node_begin(),m.node_end(), post, 4);
 
 
 
@@ -448,7 +468,7 @@ auto start = std::chrono::high_resolution_clock::now();
   }
   else if (dam){
 
-omp_set_num_threads(8);
+omp_set_num_threads(4);
 #pragma omp parallel
 {
 	for ( auto it = mesh.node_begin(); it!= mesh.node_end(); ++it){

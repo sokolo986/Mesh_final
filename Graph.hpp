@@ -12,8 +12,8 @@
 #include <cassert>
 #include <unordered_map>
 #include <map>
-#include <mlpack/core.hpp>
-#include <mlpack/methods/neighbor_search/neighbor_search.hpp>
+//#include <mlpack/core.hpp>
+//#include <mlpack/methods/neighbor_search/neighbor_search.hpp>
 #include "omp.h"
 using namespace std;
 
@@ -81,7 +81,7 @@ class Graph {
   //typedef typename mlpack::neighbor::NearestNeighborSort NodeSortPolicy;
   //typedef typename mlpack::tree::BinarySpaceTree< mlpack::bound::BallBound<arma::vec> > bst;
 
-  
+
 
   // CONSTRUCTOR AND DESTRUCTOR ----------------------
 
@@ -96,7 +96,7 @@ class Graph {
    private:
     friend class Graph;
     Graph* set_;
-   
+
     NodeSortPolicy(const Graph* graph): set_(const_cast<Graph*>(graph)){
     }
 
@@ -113,7 +113,7 @@ class Graph {
 		auto qn = Node(set_,(*queryNode));
 		auto rn = Node(set_,(*referenceNode));
 		if (set_->hasEdge(qn,rn) and qn!=rn)
-			return norm(qn.position()-rn.position()); 
+			return norm(qn.position()-rn.position());
 		else
 			return -1;
 	}
@@ -152,16 +152,16 @@ class Graph {
 		if (BestPointToNodeDistance (queryPoint, referenceNode)==-1)
 			return pointToCenterDistance;
 		else{
-			return std::min(pointToCenterDistance,norm(queryPoint-referenceNode->position())); 
+			return std::min(pointToCenterDistance,norm(queryPoint-referenceNode->position()));
 		}
 	}
 
 	static double CombineBest (const double a, const double b){
 		if (a == -1 || b == -1)
-			return	std::max(a,b);	
+			return	std::max(a,b);
 		return std::abs(a-b);
 	}
-	
+
 	static double CombineWorst (const double a, const double b){
 		if (a == DBL_MAX || b == DBL_MAX)
 		       return DBL_MAX;
@@ -181,26 +181,26 @@ class Graph {
 				if ((*list_it)<newDistance)
 					return (list_it-list.begin());
 			}
-			
+
 		}
-				  
+
 	}
 
 	static double WorstDistance (){
 		return DBL_MAX;
 	}
     };*/
-   
+
     /*class NearestNeighbor{
 	private:
 	   friend class Graph;
 	   friend class Node;
 	   arma::Mat<size_type> neighbors_;
            arma::mat distances_;
-	   
+
 	   NearestNeighbor(const Graph* set){
 		//typedef NeighborSearch<NearestNeighborSort, mlpack::metric::EuclideanDistance> nn;
-				
+
 		//NeighborSearch<Graph::NodeSortPolicy, Graph::NodeMetric{set}> n_;
 		//Graph::NodeMetric MetricPolicy{set};
 		NeighborSearch<NearestNeighborSort,Graph::NodeMetric(set)> my_nn;
@@ -212,7 +212,7 @@ class Graph {
 	public:
       	   NearestNeighbor(){
 	   }
-	
+
 	   const arma::Mat<size_type>& getNeighbors(){
 		return neighbors_;
 	   }
@@ -750,15 +750,15 @@ class Graph {
 
      vector<internal_edge> edges_;
      vector<size_type> i2e_;
-     //vector<map<size_type,size_type>> adjmap_; 
-
+     //vector<map<size_type,size_type>> adjmap_;
+/*
      class NodeMetric{
         private:
 		Graph* set_;
         public:
 	  NodeMetric(Graph* set):set_(const_cast<Graph*>(set)){
 	  }
-	
+
 	  template<typename VecType1, typename VecType2>
   	  double Evaluate(const VecType1& a, const VecType2& b){
 		if (hasEdge(Node(set_,(*a)),Node(set_,(*b))))
@@ -767,8 +767,8 @@ class Graph {
 			return DBL_MAX;
           }
       };
-     
 
+*/
      /* adjmap_[node_a_idx][node_b_idx] = edge_idx && O(1) Access Time */
      vector<map<size_type,size_type>> adjmap_;
 };

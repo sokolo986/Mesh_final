@@ -7,7 +7,7 @@
 #SDLEXEC += viewer
 #SDLEXEC += subgraph
 #SDLEXEC += mass_spring
-#SDLEXEC += shallow_water
+SDLEXEC += shallow_water_ext
 #SDLEXEC += test_nodes
 #SDLEXEC += test_edges
 #SDLEXEC += test
@@ -15,7 +15,7 @@
 #SDLEXEC += viewer
 #SDLEXEC += subgraph
 #SDLEXEC += shortest_path
-#SDLEXEC += mass_spring
+SDLEXEC += mass_spring
 #SDLEXEC += poisson
 #SDLEXEC += shallow_water
 #SDLEXEC += cp_shallow_water
