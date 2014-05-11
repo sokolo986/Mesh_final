@@ -16,11 +16,12 @@ SDLEXEC += shallow_water_ext
 #SDLEXEC += subgraph
 #SDLEXEC += shortest_path
 SDLEXEC += mass_spring
-#SDLEXEC += poisson
+SDLEXEC += temp
 #SDLEXEC += shallow_water
 #SDLEXEC += cp_shallow_water
 SDLEXEC += OPENMPshallow
 SDLEXEC += OPENMPshallow2
+SDLEXEC += combine
 SDLEXEC += openmp_mass_spring
 
 # Get the shell name to determine the OS

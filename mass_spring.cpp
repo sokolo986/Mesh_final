@@ -17,7 +17,7 @@
 #include "Mesh.hpp"
 #include "Point.hpp"
 
-
+namespace mass_spring {
 // Gravity in meters/sec^2
 static constexpr double grav = 9.81;
 
@@ -28,7 +28,7 @@ static constexpr double spring_const = 35.0;
 static constexpr double gas_const = 30;
 
 // total mass of the mesh
-static constexpr double total_mass = 0.3;
+static constexpr double total_mass = 3000000;
 
 // interaction factor for wind force
 static constexpr double wind_const = 0.00009;
@@ -37,7 +37,7 @@ static constexpr double wind_const = 0.00009;
 static const Point wind_velocity_const = Point(0.0, 1.0, 2.0);
 
 // plane position constant
-static constexpr double plane_const = -2.0;
+static constexpr double plane_const = -0.0;
 
 // the time at which to add gas
 static constexpr double t_addgas = 1.0;
@@ -182,14 +182,48 @@ double symp_euler_step(M& m, double t, double dt, F force, C constraints) {
   // iterate through each node in the mesh and update velocity
   for(auto it=m.node_begin(); it != m.node_end(); ++ it)
   {
+
         mass = (*it).value().mass;
-        (*it).value().velocity += force((*it),t)*dt/mass;
+        (*it).value().velocity = (*it).value().velocity+force((*it),t)*dt/mass;
+
+        //std::cout << "vel is " << (*it).value().velocity << std::endl;
   }
 
 
   return t + dt;
 }
 
+
+
+/*
+double symp_euler_step(G& g, double t, double dt, F force, C constraint) {
+
+  auto NodeNumber = g.num_nodes();
+  double mass = 1.0/NodeNumber;
+
+ // Calculate new positions and set the positions
+  for (auto it = g.node_begin(); it != g.node_end(); ++it)
+  {
+    Point orig = (*it).position();
+    auto vel = (*it).value().vel;
+    Point newLocation = orig + vel * dt;
+    (*it).set_position(newLocation);
+   }
+
+  // apply constraint
+  constraint(g, t);
+
+  // Calculate velocity and update velocity
+  for (auto it = g.node_begin(); it != g.node_end(); ++it)
+  {
+    auto vel = (*it).value().vel;
+    auto f = force((*it),t);
+    (*it).value().vel = vel + f* (dt /mass);
+  }
+  return t + dt;
+}
+
+*/
 
 /** Force function object for assessing the force due to gravity on
  *  the nodes of the mesh. I use a struct rather than a class here
@@ -239,7 +273,12 @@ struct MassSpringForce {
     // iterate through each neighboring node and add spring forces
     for(auto it = n.edge_begin(); it != n.edge_end(); ++it)
     {
-        node2 = (*it).node2();
+        auto node2 = n;
+        if (n == (*it).node1())
+            node2 = (*it).node2();
+        else
+            node2 = (*it).node1();
+
 
         sprint_const_this_edge = (*it).value().spring_constant;
         initial_spring_length = (*it).value().initial_length;
@@ -250,6 +289,35 @@ struct MassSpringForce {
     return force;
   }
 };
+
+/*
+struct MassSpringForce {
+  /** Struct/Class of Mass Spring force
+  * @param[in] node object with value function.
+  * @param[out] Point object representing mass spring force
+  * @post return a Point object representing mass spring force based on the calculation : difference =  (current position - adjacent nodes position)
+  * @post mass spring force = \sum -K * difference / Norm (difference) * ( norm(difference) - length), length is provided as initial length between nodes before movement
+  *
+  */
+  /*
+  template <typename NODE>
+  Point operator()(NODE n, double t) {
+    Point Sforce = Point(0,0,0);
+    for (auto it = n.edge_begin(); it != n.edge_end();++it)
+    {
+        auto adj = n;
+        if (n == (*it).node1())
+            adj = (*it).node2();
+        else
+            adj = (*it).node1();
+        Point diff = n.position() - adj.position();
+        Sforce += (-(*it).value().k) * diff/norm(diff) * ( norm(diff) - (*it).value().length);
+    }
+    return Sforce;
+    }
+};
+
+*/
 
 /** Force function object for assessing the damping force on
  *  the nodes of the mesh. I use a struct rather than a class here
@@ -338,6 +406,8 @@ struct PressureForce {
   force_type operator()(NODE n, double t) {
     (void) t;
     force_type pressure_force = Point(0.0, 0.0, 0.0);
+    //for (auto adji = m.vertex_begin((*it).index()); adji !=  m.vertex_end((*it).index()); ++ adji)
+
     /*
     for(auto it=n.tri_begin(); it != n.tri_end(); ++ it) {
       auto tri = (*it);
@@ -474,9 +544,14 @@ combined_force<combined_force<F1,F2>, combined_force<combined_force<F3,F4>, F5>>
 struct PlaneConstraint {
  private:
    double plane_;
+   Point Balltarget;
+   Point* vel_init;
+   MeshType ballmeshOrig;
+   int* launchBall;
  public:
    // public constructor: given plane position
-   PlaneConstraint(const double& plane) : plane_(plane) {}
+   PlaneConstraint(const double& plane, MeshType ballmeshOrig,  Point Balltarget, Point& vel_init, int& launchBall) :
+                            plane_(plane), Balltarget(Balltarget), vel_init(&vel_init), ballmeshOrig(ballmeshOrig), launchBall(&launchBall) {}
    // public constructor: use the default plane position
    PlaneConstraint() : plane_(plane_const) {}
 
@@ -496,17 +571,29 @@ struct PlaneConstraint {
   template <typename MESH>
   void operator()(MESH& m, double t) {
     (void) t;
+    bool reset = false;
     for(auto it=m.node_begin(); it != m.node_end(); ++ it)
     {
         if ((*it).position().z < plane_)
         {
-            Point current_position = (*it).position();
-            Point current_veloc = (*it).value().velocity;
-            (*it).set_position(Point(current_position.x,current_position.y,plane_));
-            (*it).value().velocity = Point(current_veloc.x,current_veloc.y,-current_veloc.z);
+            reset = true;
+            *launchBall = 0;
         }
     }
-  }
+    if (reset)
+    {
+        auto it=m.node_begin();
+        auto cit = ballmeshOrig.node_begin();
+        std::cout << "initial vel is " << (*vel_init).x << (*vel_init).y << (*vel_init).z << endl;
+        for(; it != m.node_end() && cit!= ballmeshOrig.node_end(); ++ it, ++cit)
+        {
+            (*it).set_position((*cit).position());
+            (*it).value().velocity = (*vel_init);
+        }
+
+
+    }
+    }
 };
 
 /** Constraint function object for constraining the nodes of the graph
@@ -666,9 +753,33 @@ combined_constraints<combined_constraints<C1,C2>,combined_constraints<C3,C4>> ma
 }
 
 
+struct NodePosition {
+	template <typename NODE>
+		Point operator()(const NODE& n) {
+			// HW4B: You may change this to plot something other than the
+			// positions of the nodes
+			//return n.position();
+			return Point(n.position().x, n.position().y,n.position().z);
+		}
+};
 
+struct Node_Color{
+    int Length_;
+    Node_Color(const int Length): Length_(Length){};
 
+    template <typename NODE>
+    CS207::Color operator()(NODE& n) //Node_Color(Graph<int>::Node n)
+     {
+      double c = (double(n.position().x))/1000;
+      if (c > 1) c = 1;
+      else if (c< 0) c=0;
+    return CS207::Color::make_heat(1);
+}
+};
 
+}
+
+/*
 
 int main(int argc, char* argv[]) {
   // Check arguments
@@ -710,7 +821,7 @@ int main(int argc, char* argv[]) {
   for(auto it=mesh.node_begin(); it != mesh.node_end(); ++ it)
   {
       (*it).value().mass = total_mass/mesh.num_nodes();
-      (*it).value().velocity = Point(0.0,0.0,0.0);
+      (*it).value().velocity = Point(50.0,50.0,10.0);
   }
 
   // Set spring constants for each node equal to spring_const variable
@@ -749,7 +860,7 @@ int main(int argc, char* argv[]) {
   // Begin the mass-spring simulation
   double dt = 0.0001;
   double t_start = 0;
-  double t_end = 20.0;
+  double t_end = 5.0;
 
 
   // Initialize constraints
@@ -758,7 +869,6 @@ int main(int argc, char* argv[]) {
   //auto combined_constraints = make_combined_constraints(c1,c2);
 
   std::cout << " begin the euler step"<< std::endl;
-  sleep(5);
   for (double t = t_start; t < t_end; t += dt) {
     MassSpringForce ms_force;
     //PressureForce p_force = PressureForce(0.0);
@@ -775,16 +885,19 @@ int main(int argc, char* argv[]) {
         std::cout << "Adding gas to the ball now..." << std::endl;
     }
 */
+
+/*
+    CS207::sleep(0.01);
     //auto combined_forces = make_combined_force(ms_force, p_force, w_force, g_force);
     auto combined_forces = make_combined_force(ms_force,  g_force);
     symp_euler_step(mesh, t, dt, combined_forces, c1);
-    std::cout << " here we have finish one step " << std::endl;
     // Update viewer with nodes' new positions
     viewer.add_nodes(mesh.node_begin(), mesh.node_end(), node_map);
-    sleep(0.5);
     // update the viewer's label with the ball center's position on the z axis
     viewer.set_label(get_center(mesh).z);
-    sleep(0.5);
+    //viewer.center_view();
   }
   return 0;
 }
+
+*/

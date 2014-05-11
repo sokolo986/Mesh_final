@@ -370,6 +370,23 @@ struct HeightComparator {
 }HeightComparator;
 
 
+struct Node_Color{
+    int Length_;
+    Node_Color(const int Length): Length_(Length){};
+
+    template <typename NODE>
+    CS207::Color operator()(NODE& n) //Node_Color(Graph<int>::Node n)
+     {
+      double c = (double(n.value().h))/1000;
+      if (c > 1) c = 1;
+      else if (c< 0) c=0;
+    return CS207::Color::make_heat(c);
+}
+};
+
+/*
+
+
 
 
 int main(int argc, char* argv[])
@@ -511,16 +528,28 @@ int main(int argc, char* argv[])
 	// HW4B: Need to define Mesh::node_type and node/edge iterator
 	// before these can be used!
 
+	  auto min_length = *std::min_element(mesh.edge_begin(), mesh.edge_end(), EdgeComparator);
+
+      auto max_h = *std::max_element(mesh.node_begin(), mesh.node_end(), HeightComparator);
+
+      double dt = 0.25 * min_length.length() / (sqrt(grav * max_h.value().h));
+      double t_start = 0;
+      double t_end = 20;
+        std::cout << "dt = " << dt << std::endl;
+
+
 	auto node_map = viewer.empty_node_map(mesh);
 	auto boat_node_map = viewer.empty_node_map(mesh_boat);
 	viewer.add_nodes(mesh.node_begin(), mesh.node_end(),
-			CS207::DefaultColor(), NodePosition(), node_map);
+			Node_Color(max_h.value().h), NodePosition(), node_map);
 	viewer.add_nodes(mesh_boat.node_begin(), mesh_boat.node_end(),
 			CS207::DefaultColor(), BoatNodePosition(), boat_node_map);
-	viewer.add_edges(mesh.edge_begin(), mesh.edge_end(), node_map);
-	viewer.add_edges(mesh_boat.edge_begin(), mesh_boat.edge_end(), boat_node_map);
-
+	//viewer.add_edges(mesh.edge_begin(), mesh.edge_end(), node_map);
+	viewer.add_triangles(mesh.tri_begin(), mesh.tri_end(), node_map);
+	//viewer.add_edges(mesh_boat.edge_begin(), mesh_boat.edge_end(), boat_node_map);
+    viewer.add_triangles(mesh_boat.tri_begin(), mesh_boat.tri_end(), boat_node_map);
 	viewer.center_view();
+
 
 
 	// HW4B: Timestep
@@ -546,17 +575,7 @@ int main(int argc, char* argv[])
 	std::cout << "dt = " << dt << std::endl;
 */
 
-	  auto min_length = *std::min_element(mesh.edge_begin(), mesh.edge_end(), EdgeComparator);
-
-      auto max_h = *std::max_element(mesh.node_begin(), mesh.node_end(), HeightComparator);
-
-      double dt = 0.25 * min_length.length() / (sqrt(grav * max_h.value().h));
-      double t_start = 0;
-      double t_end = 20;
-        std::cout << "dt = " << dt << std::endl;
-
-
-
+/*
 	// Preconstruct a Flux functor
 	EdgeFluxCalculator f;
 
@@ -574,7 +593,7 @@ int main(int argc, char* argv[])
 		// Update the viewer with new node positions
 		// HW4B: Need to define node_iterators before these can be used!
 		viewer.add_nodes(mesh.node_begin(), mesh.node_end(),
-				CS207::DefaultColor(), NodePosition(), node_map);
+				Node_Color(max_h.value().h), NodePosition(), node_map);
 		viewer.add_nodes(mesh_boat.node_begin(), mesh_boat.node_end(),
 				CS207::DefaultColor(), BoatNodePosition(), boat_node_map);
 		viewer.set_label(t);
@@ -590,3 +609,5 @@ int main(int argc, char* argv[])
 
 	return 0;
 }
+
+*/
