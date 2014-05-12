@@ -312,6 +312,32 @@ auto start = std::chrono::high_resolution_clock::now();
             << mesh.num_edges() << " "
             << mesh.num_triangles() << std::endl;
 
+ 
+ //Start of nearest neighor.  Put all positions that you want inspected in a vector of type double
+ std::vector<double> pos; 
+ for (auto it = mesh.node_begin(); it != mesh.node_end(); ++it ) 	
+	pos.push_back((*it).position().z);
+
+  unsigned num_neighbors = 10; //num of neighors to return
+  unsigned object_idx = 5; // do this if you want to examine the neighbors of a specific idx
+
+  MeshType::NearestNeighbor a = mesh.calculateNearestNeighbors(num_neighbors ,pos);
+  auto idx = mesh.getNeighbors(a,object_idx);
+  auto dist = mesh.getNeighborDistances(a,object_idx);
+  /*auto all_n = mesh.getAllNeighbors(a);
+  auto all_d = mesh.getAllNeighborDistances(a);*/
+
+  for (unsigned i = 0; i < idx.size(); ++i)
+	std::cout << "Node " << object_idx << "'s " << i << " neighbor is: node " << idx[i] << " with distance of " << dist[i] << endl;
+
+  /*//Uncomment to view results for all nodes
+  for (unsigned j = 0; j < pos.size(); ++j){
+     std::cout << endl;
+     for (unsigned i = 0; i < num_neighbors; ++i)
+	std::cout << "For node " << j << " neighbor " << i << " is index " << all_n[i+j*num_neighbors] << " and distance is " << all_d[i+j*num_neighbors] << endl;
+  }*/
+
+
   // HW4B Initialization
   // Set the initial conditions
   int wave = 0, peddle=0, dam=1;

@@ -236,6 +236,16 @@ class Mesh {
 	return fetch().value_;
     }
 
+    Node node(size_type i) const {
+      //assert(i < 4 && i > 0);
+      if (i==1)
+        return node1();
+      else if (i==2)
+        return node2();
+      else if (i==3)
+        return node3();
+    }
+
     /** Calculates the normal vector between two adjacent triangles. */
     Point norm_vector(const Triangle& t1){
 	if (!t1.has_node(node1()))
@@ -269,6 +279,7 @@ class Mesh {
 	}
 
     }
+
 
 	/** Returns the normal vector of an Edge */
 	Point norm_vector(const Edge& e){
@@ -724,7 +735,12 @@ class Mesh {
 		size_type index_;
 	};
 };
-  
+
+/*
+  template<typename FUNC, typename ITER>
+  void applytoall(ITER ibegin, ITER iend, FUNC& functor, int threads)
+  {
+  omp_set_num_threads(threads);
 
 template<typename FUNC, typename ITER>
   void applytoall(ITER ibegin, ITER iend, FUNC& functor, int threads)
@@ -743,4 +759,4 @@ template<typename FUNC, typename ITER>
 	//}
   }
 
-
+*/

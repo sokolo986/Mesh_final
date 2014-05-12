@@ -409,7 +409,7 @@ omp_set_num_threads(8);
 
   double dt = 0.25 * min_length.length() / (sqrt(grav * max_h.value().h));
   double t_start = 0;
-  double t_end = 0.1;
+  double t_end = 10;
 
   // Preconstruct a Flux functor
   EdgeFluxCalculator f;
