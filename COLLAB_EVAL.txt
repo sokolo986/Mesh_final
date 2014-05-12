@@ -1,0 +1,11 @@
+Sierra Okolo and Ming Zhu
+
+We implemented code from the following group:
+
+Group X:
+This group provided us with collision detection modules.  This code functioned reasonably well and we integrated it into our cannonball code by using it detect impact with a moving ship and moving object
+
+Group Y:
+Floating object on the water.  This code ran flawlessly.  We integrated it into our cannonball code and it ran without any hitches.  Changes that we had to make include:
+
+We integrated it into our code by performing the following:
