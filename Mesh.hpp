@@ -9,6 +9,11 @@
 #include <vector>
 #include <cassert>
 #include <Graph.hpp>
+
+#include <iostream>
+#include <fstream>
+#include <mlpack/core.hpp>
+#include <mlpack/methods/neighbor_search/neighbor_search.hpp>
 using namespace std;
 
 
@@ -71,7 +76,7 @@ class Mesh {
 
   /** Forward iterators, which iterates over all triangles with the same edge. */
   class tri_edge_iterator;
-
+  class NearestNeighbor;
 
   /** Initializes an empty mesh. */
   Mesh(){
@@ -176,6 +181,7 @@ class Mesh {
   class Triangle: private totally_ordered<Triangle> {
    private:
         friend class Mesh;
+
 	Mesh* set_;
 	size_type idx_;
 
@@ -208,7 +214,7 @@ class Mesh {
     }
 
     /** Returns this triangle's position. */
-    const Point& position() const {
+    Point position() const{
 	return (node1().position()+node2().position()+node3.position())/3;
     }
 
@@ -365,8 +371,27 @@ class Mesh {
   provide interface for parallel computing on all the node
   */
 
+    /* Nearest Neighbor Accessor Methods */
+    NearestNeighbor calculateNearestNeighbors(const size_type num_neighbors,std::vector<value_type>& pos){
+	return NearestNeighbor(this, num_neighbors,pos);
+    } 
 
+    std::vector<size_type> getNeighbors(Mesh::NearestNeighbor& a, size_type idx) const{
+	return a.n(idx); 
+    }
 
+    std::vector<value_type> getNeighborDistances(Mesh::NearestNeighbor& a, size_type idx) const{
+	return a.d(idx); 
+    } 
+
+    arma::Mat<size_t> getAllNeighbors(Mesh::NearestNeighbor& a) const{
+	return a.all_n(); 
+    }
+
+    arma::mat getAllNeighborDistances(Mesh::NearestNeighbor& a) const{
+	return a.all_d(); 
+    } 
+    /* ---------------------------------- */
 
     /** Returns a node's value */
     node_value_type& value(Node n, node_value_type value){
@@ -448,8 +473,69 @@ class Mesh {
 	node_lookup_[n3.index()].push_back(tri_idx);
 
 	return this->triangle(tri_idx);
-  }
+    }
 
+    class NearestNeighbor: private totally_ordered<NearestNeighbor> {
+      private:
+	friend class Mesh;
+	Mesh* set_;
+	size_type num_neighbors_;
+	arma::Mat<size_t> n_;
+	arma::mat d_;
+	
+	NearestNeighbor(const Mesh* set, const size_type num_neighbors, const std::vector<value_type>& pos):set_(const_cast<Mesh*>(set)),num_neighbors_(num_neighbors){
+		arma::mat new_arma_;
+		vector<value_type> x;
+		ofstream myfile;
+		//Need to fix this so it is more general
+		myfile.open("nodeData.csv");
+		for (auto i = pos.begin(); i < pos.end(); ++i)
+			myfile << (*i) << "\n";
+		myfile.close();
+		mlpack::data::Load("nodeData.csv",new_arma_);
+		//---------------
+		nn a(new_arma_);
+		a.Search(num_neighbors_,n_,d_);
+	}
+	
+	NearestNeighbor(const Mesh* set, const size_type num_neighbors, const arma::Mat<size_t> n, const arma::mat d):set_(const_cast<Mesh*>(set)),num_neighbors_(num_neighbors),n_(n),d_(d){
+	}
+
+      public:
+	typedef mlpack::neighbor::NeighborSearch<NearestNeighborSort, mlpack::metric::EuclideanDistance> nn; 
+
+	NearestNeighbor(){
+	}
+
+	std::vector<size_type> n(const size_type idx){
+		assert((idx*num_neighbors_) < n_.size());
+	
+		std::vector<size_type> v;
+		for(size_type j=0; j<num_neighbors_; ++j)
+			v.push_back(n_[num_neighbors_*idx+j]);
+		return v;
+	}
+
+	std::vector<value_type> d(const size_type idx){
+		assert((idx*num_neighbors_) < n_.size());
+	
+		std::vector<value_type> v;
+		for(unsigned j=0; j<num_neighbors_; ++j)
+			v.push_back(d_[num_neighbors_*idx+j]);
+		return v;
+	}
+
+	const arma::Mat<size_t>& all_n(){
+		return n_;
+	}
+	const arma::mat& all_d(){
+		return d_;
+	}
+
+	NearestNeighbor operator=(NearestNeighbor& n){
+		return *this;			
+	}
+};  
 
   /** Iterates over all triangles. */
   class tri_iterator: private totally_ordered<tri_iterator> {
@@ -609,6 +695,7 @@ class Mesh {
 
   };
 
+  
   private:
 
 	/* Stores Graph Information */
@@ -620,7 +707,7 @@ class Mesh {
 
 	/*indexed by node UID. Stores triangles data.**/
 	std::vector<tri_info_type> triangles_;
-
+	NearestNeighbor nn_;
 	/** Stores Triangle Information */
 	struct tri_info_type {
 		Mesh* set_;
@@ -636,24 +723,24 @@ class Mesh {
 		tri_value_type value_;
 		size_type index_;
 	};
-
 };
-  template<typename FUNC, typename ITER>
+  
+
+template<typename FUNC, typename ITER>
   void applytoall(ITER ibegin, ITER iend, FUNC& functor, int threads)
   {
-  omp_set_num_threads(threads);
-
-  #pragma omp parallel
-  {
-	for (auto i = ibegin; i!= iend; ++i)
-	{
-	#pragma omp single nowait
-	{
-		functor(i);
-	}
-	}
-
-  }
+  	//omp_set_num_threads(threads);
+	#pragma omp parallel for num_threads(threads)
+	//{
+	    
+		for (auto i = ibegin; i <= iend; ++i)
+		{
+		//#pragma omp single nowait
+		//{
+			functor(i);
+		//}
+		}
+	//}
   }
 
 

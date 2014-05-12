@@ -14,7 +14,7 @@
 #include <map>
 #include <mlpack/core.hpp>
 #include <mlpack/methods/neighbor_search/neighbor_search.hpp>
-#include "omp.h"
+//#include "omp.h"
 using namespace std;
 
 
@@ -27,7 +27,6 @@ using namespace std;
  * An Edge connects two nodes s.t. <N_i,N_j> == <N_j,N_i> for all i,j in the set of valid Nodes for this Graph subject to !(i==j)
  * Users can add and retrieve nodes and edges. There is at most one edge between any pair of distinct nodes.
  * V describes a user-defined abstract representation of a node (i.e. Mass, Temperature, Weight).
->>>>>>> 1edfe42f366f484fd0d5c793774f24717b3503aa
  */
 template <typename V, typename E>
 class Graph {
@@ -35,7 +34,7 @@ class Graph {
    friend class NodeSortPolicy;
    struct internal_node;
    struct internal_edge;
-   //class NodeMetric;
+   class NodeMetric;
    //typedef typename mlpack::metric MetricType;
    class NodeMetric;
  public:
@@ -78,6 +77,7 @@ class Graph {
   /** Nearest Neighbor Objects */
   //class NodeSortPolicy;
   //class NearestNeighbor;
+   typedef mlpack::neighbor::NeighborSearch<NearestNeighborSort, NodeMetric> nn;
   //typedef typename mlpack::neighbor::NearestNeighborSort NodeSortPolicy;
   //typedef typename mlpack::tree::BinarySpaceTree< mlpack::bound::BallBound<arma::vec> > bst;
 
@@ -91,6 +91,8 @@ class Graph {
 
   /** Default destructor */
   ~Graph() = default;
+
+  
 
   /*class NodeSortPolicy{
    private:
@@ -367,7 +369,7 @@ class Graph {
   provide interface for parallel computing on all the node
   */
 
-  template<typename FUNC, typename ITER>
+  /*template<typename FUNC, typename ITER>
   void applytoall(ITER ibegin, ITER iend, FUNC& functor, int threads)
   {
   omp_set_num_threads(threads);
@@ -383,7 +385,7 @@ class Graph {
 	}
 
   }
-  }
+  }*/
 
 
   /** Remove all nodes and edges from this graph.
