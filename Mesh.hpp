@@ -240,6 +240,24 @@ class Mesh {
         return node3();
     }
 
+    /* test if a point is in trianlge */
+
+    float sign(Point p1, Point p2, Point p3)
+    {
+  return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
+    }
+
+bool PointInTriangle(Point pt) //Point v1, Point v2, Point v3)
+{
+  bool b1, b2, b3;
+
+  b1 = sign(pt, node1().position(), node2().position()) < 0.0f;
+  b2 = sign(pt, node2().position(), node3().position()) < 0.0f;
+  b3 = sign(pt, node3().position(), node1().position()) < 0.0f;
+
+  return ((b1 == b2) && (b2 == b3));
+}
+
     /** Calculates the normal vector between two adjacent triangles. */
     Point norm_vector(const Triangle& t1){
 	if (!t1.has_node(node1()))

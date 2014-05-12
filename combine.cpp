@@ -8,7 +8,7 @@
 #include "Mesh.hpp"
 #include "shallow_water_ext.cpp"
 #include "mass_spring.cpp"
-
+using namespace shallow_water;
 
 struct NodeComparatorX {
   /** Struct/Class of comparator to compare edge length
@@ -210,7 +210,7 @@ int main(int argc, char* argv[])
 	boat_loc[1] = 0.2;
 	boat_loc[2] = 0.1;
 	boat_loc[3] = 0.2;
-	double boat_weight = 10000.0;
+	double boat_weight = 100.0;
 	double pressure = boat_weight/((boat_loc[3]-boat_loc[2])*(boat_loc[1]-boat_loc[0]));
 
 	MeshType mesh_boat;
@@ -289,18 +289,19 @@ working on the ball now
   }
 
   // Calculate the shift point
+
   auto minx =  *std::min_element(mesh.node_begin(), mesh.node_end(), NodeComparatorX);
   auto miny =  *std::min_element(mesh.node_begin(), mesh.node_end(), NodeComparatorY);
   auto min_h = *std::min_element(mesh.node_begin(), mesh.node_end(), HeightComparator);
 
-  Point Ballcenter(0,0,0);
-  for(auto it=ballmesh.node_begin(); it != ballmesh.node_end(); ++ it)
-  {
-    Ballcenter += (*it).position();
-  }
-  Ballcenter = Ballcenter/ballmesh.num_nodes();
+  //Point Ballcenter(0,0,0);
+  //for(auto it=ballmesh.node_begin(); it != ballmesh.node_end(); ++ it)
+  //{
+  //  Ballcenter += (*it).position();
+  //}
+  Point Ballcenter = mass_spring::get_center(ballmesh);//Ballcenter/ballmesh.num_nodes();
 
-  Point Balltarget(minx.position().x+1.0, miny.position().y-1.0, min_h.value().h+0.1);
+  Point Balltarget(minx.position().x+.5, miny.position().y-.5, min_h.value().h+0.1);
   Point shift = Balltarget - Ballcenter;
   std::cout << "shift is " << shift.x << shift.y << shift.z << endl;
   for(auto it=ballmesh.node_begin(); it != ballmesh.node_end(); ++ it)
@@ -310,8 +311,7 @@ working on the ball now
 
   auto ballmeshOrig = ballmesh; // save a copy to reset the ball
 
-  Point initialVel(1, 1, 1);
-
+  Point initialVel(2, 4, 3);
 
   // Create a trianges_file from the second input argument
   std::ifstream triangles_file(argv[6]);
@@ -380,9 +380,10 @@ working on the ball now
   //mass_spring::PlaneConstraint c1;
   //SelfCollisionConstraint c2;
   //auto combined_constraints = make_combined_constraints(c1,c2);
-   mass_spring::PlaneConstraint c1(min_h.value().h,  ballmeshOrig, Balltarget, initialVel, launchBall);
+   int reset_ball=0;
+   mass_spring::PlaneConstraint c1( min_h.value().h ,  ballmeshOrig, Balltarget, initialVel, launchBall, reset_ball);
 
-	viewer.center_view();
+   viewer.center_view();
 
 
 /**********************************************************
@@ -395,7 +396,7 @@ END OF working on the ball now
 	for (double t = t_start; t < t_end; t += dt) {
 		// Step forward in time with forward Euler
 		systime = t;
-		hyperbolic_step_ext(mesh, f, t, dt, 1000.0, boat_loc, pressure);
+		hyperbolic_step_ext(mesh, f, t, dt, 1000.0, boat_loc, pressure, &launchBall, &reset_ball, mass_spring::get_center(ballmesh) );
 
 		// Update node values with triangle-averaged values
 		post_process(mesh);
@@ -417,16 +418,25 @@ END OF working on the ball now
 
         (void) d_force; // prevents compiler from throwing error for unused variable
 
-
-        CS207::sleep(0);
         //auto combined_forces = make_combined_force(ms_force, p_force, w_force, g_force);
-        auto combined_forces = mass_spring::make_combined_force(ms_force,  g_force);
+        auto combined_forces = mass_spring ::make_combined_force(ms_force,  g_force);
         mass_spring::symp_euler_step(ballmesh, t, dt, combined_forces, c1);
         // Update viewer with nodes' new positions
         viewer.add_nodes(ballmesh.node_begin(), ballmesh.node_end(), ball_node_map);
-        // update the viewer's label with the ball center's position on the z axis
-        //viewer.set_label(get_center(ballmesh).z);
-        //viewer.center_view();
+        min_h = *std::min_element(mesh.node_begin(), mesh.node_end(), HeightComparator);
+
+        }
+        else if (reset_ball)
+        {
+            auto it=ballmesh.node_begin();
+            auto cit = ballmeshOrig.node_begin();
+            for(; it != ballmesh.node_end() && cit!= ballmeshOrig.node_end(); ++ it, ++cit)
+            {
+                (*it).set_position((*cit).position());
+                (*it).value().velocity = initialVel;
+            }
+            viewer.add_nodes(ballmesh.node_begin(), ballmesh.node_end(), mass_spring::Node_Color(1),mass_spring::NodePosition(), ball_node_map);
+            reset_ball=0;
         }
 
 		viewer.set_label(t);

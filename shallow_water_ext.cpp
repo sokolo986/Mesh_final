@@ -16,6 +16,7 @@
 
 #include "Mesh.hpp"
 
+namespace shallow_water{
 // Standard gravity (average gravity at Earth's surface) in meters/sec^2
 static constexpr double grav = 9.80665;
 
@@ -198,12 +199,24 @@ typedef unsigned size_type;
 
 
 template <typename MESH, typename FLUX>
-double hyperbolic_step_ext(MESH& m, FLUX& f, double t, double dt, double rho, std::vector<double>& boat_loc, double pressure) {
+double hyperbolic_step_ext(MESH& m, FLUX& f, double t, double dt, double rho,
+                           std::vector<double>& boat_loc, double pressure,
+                           int* launchBall, int* reset_ball,  Point Ballcenter) {
 
 	double pressure_applied = 0;
 	boat_height = -1e20;
 
 	for (auto it = m.tri_begin(); it!=m.tri_end(); ++it){
+
+        if ((*it).PointInTriangle(Ballcenter))
+        {
+            if (Ballcenter.z <= (*it).node1().value().h || Ballcenter.z <= (*it).node2().value().h || Ballcenter.z <= (*it).node3().value().h)
+                {
+                    *launchBall=0;
+                    (*reset_ball)=1;
+
+                }
+        }
 
 		Point tri_center = ((*it).node1().position() + (*it).node2().position() + (*it).node3().position())/3.0;
 
@@ -251,33 +264,6 @@ double hyperbolic_step_ext(MESH& m, FLUX& f, double t, double dt, double rho, st
 		}
 	}
 
-/*
-		for (int i = 0; i < 3; ++i) {
-			auto tris = m.edge_tri_adjlist((*it).edge_id(i));
-
-			if (tris.size() == 2) {
-				//get triangle m
-				size_type tm;
-				if (tris[0] == (*it).index()) {
-					tm = tris[1];
-				}
-				else {
-					tm = tris[0];
-				}
-				dm = m.triangle(tm).value();
-			}
-
-			else {
-				// boundary condition
-				dm = QVar((*it).value().h,0,0);
-			}
-
-			auto nx = (*it).norm_vector(i).x;
-			auto ny = (*it).norm_vector(i).y;
-
-			flux_total = flux_total + f(nx, ny, dt, (*it).value(), dm, pressure_applied, rho) ;
-		}
-		*/
 
 		//step through
 		(*it).value() = (*it).value() - dt/(*it).area()*total_flux
@@ -380,10 +366,11 @@ struct Node_Color{
       double c = (double(n.value().h))/1000;
       if (c > 1) c = 1;
       else if (c< 0) c=0;
-    return CS207::Color::make_heat(c);
+    return CS207::Color::make_heat(1);
 }
 };
 
+}
 /*
 
 
