@@ -29,12 +29,8 @@ using namespace std;
 template <typename V, typename E>
 class Graph {
  private:
-   friend class NodeSortPolicy;
    struct internal_node;
    struct internal_edge;
-   class NodeMetric;
-   //typedef typename mlpack::metric MetricType;
-   class NodeMetric;
  public:
   /** Value type of a node. */
   typedef V node_value_type;
@@ -102,60 +98,63 @@ class Graph {
     };
 
    public:
-    /** Return an invalid node. */
+    /** Returns an invalid node. */
     Node() {
     }
 
-    /** Return this node's position. */
+    /** Returns this node's position. */
     Point position() const {
       return fetch().point_;
     }
 
-    /* set position when given a point */
+    /** Sets position of this node */
     void set_position(const Point & p)
     {
       fetch().point_ = p;
     }
 
-    /** Return this node's index, a number in the range [0, graph_size). */
+    /** Returns this node's index
+	@post	[0, graph_size) */
     size_type index() const {
       return fetch().index_;
     }
 
+    /** Returns the value of this node */
     node_value_type& value(){
       return fetch().value_;
     }
 
-
+    /** Returns the value of this node */
     const node_value_type& value() const{
         return fetch().value_;
     }
 
+    /** Returns the number of edges connected to this node */
     size_type degree() const{
         return graph_->adjmap_[uid_].size();
     }
 
+    /** Returns the equality of this node to another node @a n
+	@post graph==n.graph && uid==n.uid */
     bool operator==(const Node& n) const{
-        return graph_==n.graph_ && this->uid_== n.uid_;
+        return this->uid_== n.uid_ && graph_==n.graph_;
     }
 
+    /** Returns true if this node has a smaller uid than node @a n */
     bool operator< (const Node& n) const{
-        if (graph_!=n.graph_)
-            return true;
-        return (this->uid_)< n.uid_;
+	return (graph_!=n.graph_) ||  ((this->uid_)< n.uid_);
     }
 
+    /** Returns an iterator to the first incident edge */
     incident_iterator edge_begin() const{
         return incident_iterator(this->graph_, *this, 0);
     }
 
+    /** Returns an iterator to the last incident edge */
     incident_iterator edge_end() const{
         return incident_iterator(this->graph_, *this, graph_->adjmap_[uid_].size());
     }
 
-    /*Graph::NearestNeighbor nn(){
-    	return NearestNeighbor(graph_);
-    }*/
   };
 
   /** Return the number of nodes in the graph.
@@ -175,7 +174,7 @@ class Graph {
    * @param[in] position The new node's position
    * @post new size() == old size() + 1
    * @post result_node.index() == old size()
-   *
+   * @post result_node.value() == val
    * Complexity: O(1) amortized operations.
    */
   Node add_node(const Point& position,const node_value_type & val = node_value_type ()) {
@@ -215,36 +214,13 @@ class Graph {
 	++it;
     }
 
-    for (auto it = i2u_.begin()+n.index()+1; it < i2u_.end(); ++it )
+    auto it_end = i2u_.end();
+    for (auto it = i2u_.begin()+n.index()+1; it < it_end; ++it )
 	--nodes_[(*it)].index_;
 
     i2u_.erase (i2u_.begin()+n.index());
     this->adjmap_.erase(n);
   }
-
-
-  /*
-  provide interface for parallel computing on all the node
-  */
-
-  /*template<typename FUNC, typename ITER>
-  void applytoall(ITER ibegin, ITER iend, FUNC& functor, int threads)
-  {
-  omp_set_num_threads(threads);
-
-  #pragma omp parallel
-  {
-	for (auto i = ibegin; i!= iend; ++i)
-	{
-	#pragma omp single nowait
-	{
-		functor(i);
-	}
-	}
-
-  }
-  }*/
-
 
   /** Remove all nodes and edges from this graph.
    * @post num_nodes() == 0 && num_edges() == 0
@@ -259,7 +235,6 @@ class Graph {
     adjmap_.clear();
   }
 
-
   // EDGES
 
   /** @class Graph::Edge
@@ -271,7 +246,6 @@ class Graph {
   class Edge :private totally_ordered<Edge>{
    private:
     friend class Graph;
-
     Graph* graph_;
     size_type edgeId_;
 
@@ -287,54 +261,61 @@ class Graph {
     Edge() {
     }
 
-    /** Return a node of this Edge */
+    /** Returns a node of this Edge */
     Node node1() const {
       size_type idx = fetch().node_a_;
       return Node(graph_,idx);
     }
 
-    /** Return the other node of this Edge */
+    /** Returns the other node of this Edge */
     Node node2() const {
       return Node(graph_,fetch().node_b_);
     }
 
+    /** Returns the index of this Edge */
     size_type index() const {
       return fetch().index_;
     }
 
+    /** Returns the value of this Edge */
     edge_value_type& value(){
       return fetch().value_;
     }
 
+    /** Return the value of this Edge */
     const edge_value_type& value() const{
       return fetch().value_;
     }
 
+    /** Return the length of this Edge */
     value_type length() const{
       return norm(node1().position()-node2().position());
     }
 
+    /** Return the equality of two edges
+	@post node1()==ed.node1() && node2()==ed.node2() */
     bool operator==(const Edge& ed) const{
         return (this->node1() == ed.node1() && this->node2() == ed.node2());
     }
 
+    /** Return the inequality of two edges */
     bool operator<(const Edge& ed) const{
-        return (this->node1() < ed.node1() && this->node2() < ed.node2());
+        return (this->node1() < ed.node1()) || (this->node2() < ed.node2());
     }
   };
 
-  /** Return the total number of edges in the graph.
+  /** Returns the total number of edges in the graph.
    *
-   * Complexity: No more than O(num_nodes() + num_edges()), hopefully less
+   * Complexity: O(1)
    */
   size_type num_edges() const {
     return i2e_.size();
   }
 
-  /** Return the edge with index @a i.
+  /** Returns the edge with index @a i.
    * @pre 0 <= @a i < num_edges()
    *
-   * Complexity: No more than O(num_nodes() + num_edges()), hopefully less
+   * Complexity: O(1)
    */
   Edge edge(size_type i) const {
     assert(i < num_edges());
@@ -365,10 +346,8 @@ class Graph {
    * Complexity: No more than O(num_nodes() + num_edges()), hopefully less
    */
   Edge add_edge(const Node& a, const Node& b, const edge_value_type& val = edge_value_type ()) {
-
-
-	if (has_edge(a,b)){
-		return Edge(this,adjmap_[a.uid_][b.uid_]);
+    if (has_edge(a,b)){
+	return Edge(this,adjmap_[a.uid_][b.uid_]);
     }
 
     size_type idx = i2e_.size();
@@ -392,11 +371,6 @@ class Graph {
    * This is a synonym for remove_edge(@a e.node1(), @a e.node2()), but its
    * implementation can assume that @a e is definitely an edge of the graph.
    * This might allow a faster implementation.
-   *
-   * Can invalidate edge indexes -- in other words, old edge(@a i) might not
-   * equal new edge(@a i). Can invalidate all edge and incident iterators.
-   * Invalidates any edges equal to Edge(@a a, @a b). Must not invalidate
-   * other outstanding Edge objects.
    *
    * Complexity: No more than O(num_nodes() + num_edges()), currently O(num_edges())
    */
@@ -440,7 +414,7 @@ class Graph {
   // ITERATORS
 
   /** @class Graph::node_iterator
-   * @brief Iterator class for nodes. A forward iterator. */
+   * @brief Iterator class for nodes. A random access iterator. */
   class node_iterator :private totally_ordered<node_iterator>{
    public:
     // These type definitions help us use STL's iterator_traits.
@@ -459,17 +433,39 @@ class Graph {
     node_iterator() {
     }
 
+    /** Returns a Node */
     Node operator*() const{
         auto it = Node(graph_,graph_->i2u_[nIteratorId_]);
         return it;
     }
 
+    /** Increments the node_iterator and returns a node_iterator */
     node_iterator& operator++(){
         nIteratorId_++;
         return *this;
     }
+
+    /** Decrements the iterator */
+    node_iterator& operator--(){
+        --nIteratorId_++;
+        return *this;
+    }
+
+    /** Accesses the iterator at a random location */
+    node_iterator& operator-(node_iterator& a){
+        nIteratorId_= nIteratorId_ - a.nIteratorId_;
+        return *this;
+    }
+
+    /** Accesses the iterator at a random location */
+    node_iterator& operator+(node_iterator& a){
+        nIteratorId_= nIteratorId_ + a.nIteratorId_;
+        return *this;
+    }
+
+    /** Tests the equality of this node_iterator with node iterator @a nit */
     bool operator==(const node_iterator& nit) const{
-        return (this->graph_ == nit.graph_ && this->nIteratorId_ == nit.nIteratorId_);
+        return (this->nIteratorId_ == nit.nIteratorId_ && this->graph_ == nit.graph_ );
     }
 
    private:
@@ -481,17 +477,18 @@ class Graph {
     };
   };
 
+  /** Returns an iterator to the first node in the graph */
   node_iterator node_begin() const{
       return node_iterator(this, 0);
   }
 
+  /** Returns an iterator to one past the last node in the graph*/
   node_iterator node_end() const{
       return node_iterator(this, size());
   }
 
-
   /** @class Graph::edge_iterator
-   * @brief Iterator class for edges. A forward iterator. */
+   * @brief Iterator class for edges. A random access iterator. */
   class edge_iterator  :private totally_ordered<edge_iterator>{
    public:
     // These type definitions help us use STL's iterator_traits.
@@ -510,17 +507,38 @@ class Graph {
     edge_iterator() {
     }
 
+    /** Returns an Edge at the iterator's position */
     Edge operator*() const{
         return Edge(graph_,graph_->i2e_[eIteratorId_]);
     }
 
+    /** Increments the position of this iterator and retursn an edge_iterator option */
     edge_iterator& operator++(){
         eIteratorId_++;
         return *this;
     }
 
+    /** Decrements the iterator */
+    edge_iterator& operator--(){
+        --eIteratorId_++;
+        return *this;
+    }
+
+    /** Accesses the iterator at a random location */
+    edge_iterator& operator-(edge_iterator& a){
+        eIteratorId_= eIteratorId_ - a.ieIteratorId_;
+        return *this;
+    }
+
+    /** Accesses the iterator at a random location */
+    edge_iterator& operator+(edge_iterator& a){
+        eIteratorId_= eIteratorId_ + a.ieIteratorId_;
+        return *this;
+    }
+
+    /** Tests the equality of this edge_iterator with @a eit */
     bool operator==(const edge_iterator& eit) const {
-        return (this->graph_ == eit.graph_ && this->eIteratorId_ == eit.eIteratorId_);
+        return (this->eIteratorId_ == eit.eIteratorId_ && this->graph_ == eit.graph_);
     }
 
    private:
@@ -532,14 +550,15 @@ class Graph {
     edge_iterator(const Graph* graph,size_type eIteratorId):graph_(const_cast<Graph*>(graph)), eIteratorId_(eIteratorId){};
   };
 
+  /** Returns an edge_iterator to the first edge in the graph*/
   edge_iterator edge_begin() const {
     return edge_iterator(this, 0);
   }
 
+  /** Returns an edge_iterator to one past the last edge in this graph */
   edge_iterator edge_end() const{
     return edge_iterator(this, this->i2e_.size());
   }
-
 
   /** @class Graph::incident_iterator
    * @brief Iterator class for edges incident to a given node. A forward
@@ -562,22 +581,23 @@ class Graph {
     incident_iterator() {
     }
 
+    /** Returns the Edge this object points at */
     Edge operator*() const{
-      //std::map<size_type,size_type>::iterator
        auto it = graph_->adjmap_[thisnode_].begin();
-	std::advance(it,adjedgeId_);
-
+       std::advance(it,adjedgeId_);
        size_type edgeIndex  =  it->second;
        return graph_->edge(edgeIndex);
     }
 
+    /** Increments the incident_iterator and returns a reference to this iterator */
     incident_iterator& operator++(){
         ++adjedgeId_;
         return *this;
     }
 
+    /** Tests the equality between this iterator and @a it */
     bool operator==(const incident_iterator& it) const{
-        return (this->graph_ == it.graph_ && this->thisnode_ == it.thisnode_ && this->adjedgeId_ == it.adjedgeId_);
+        return (this->adjedgeId_ == it.adjedgeId_ && this->thisnode_ == it.thisnode_ && this->graph_ == it.graph_);
     }
 
    private:
