@@ -10,74 +10,84 @@
 #include "mass_spring.cpp"
 using namespace shallow_water;
 
-struct NodeComparatorX {
-  /** Struct/Class of comparator to compare edge length
-  * @param[in] two triangle objects
-  * @param[out] boolean, true if the first triangle has the smallest edge length than the second triangle
-  */
-   template <typename NODE>
-   bool operator()(const NODE& t1, const NODE& t2) const {
-	return t1.position().x < t2.position().x;
-  }
-}NodeComparatorX;
+/**
+    SDL listener, listen to the event of keyboard and mouse.
+    @param[in] mouse and keyboard event
+    @param[in] initialVel, launchBall.
+    @post initiailVel will change on the x, y, z direction based on keyboard event, to increase or decrease the speed.
+    @post space or right click will set launchBall to 1
+**/
 
-  // sample SDL listener
 template<typename MeshType>
 struct my_listener : public CS207::SDL_Listener {
-  void handle(SDL_Event e) {   // we are forced to implement this function
+  void handle(SDL_Event e) {
     switch (e.type) {
       case SDL_MOUSEBUTTONDOWN: {
-        if (e.button.button == SDL_BUTTON_LEFT ) {
+        if (e.button.button == SDL_BUTTON_RIGHT ) {
           std::cout <<"cannonball launched...approaching targets" <<endl;
-          //for mesh_
           *launchBall = 1;
         }
         }
       case SDL_KEYDOWN: {
-        // Keyboard 'c' to center
         if (e.key.keysym.sym == SDLK_x )
          {
-            std::cout << "press up or down to increase/decrease the speed in x direction. speed is" <<(*initialVel).x << endl;
-
-            //xwhile (e.key.keysym.sym != SDLK_ESCAPE)
-            //if (e.key.keysym.sym == SDLK_UP)
-                (*initialVel).x = (*initialVel).x+0.1;
-            //if (e.key.keysym.sym == SDLK_DOWN)
-             //   (*initialVel).x = (*initialVel).x-0.01;
-
+            std::cout << "press x to increase the speed in x direction. speed is" <<(*initialVel).x << endl;
+            (*initialVel).x = (*initialVel).x+0.1;
          }
          if (e.key.keysym.sym == SDLK_c)
          {
-             std::cout << "press c to increase the speed in x direction. speed is" <<(*initialVel).x << endl;
+             std::cout << "press c to decrease the speed in x direction. speed is" <<(*initialVel).x << endl;
             (*initialVel).x = (*initialVel).x-0.1;
          }
          if (e.key.keysym.sym == SDLK_d)
          {
-             std::cout << "press x to increase the speed in x direction. speed is" <<(*initialVel).y << endl;
+             std::cout << "press d to increase the speed in y direction. speed is" <<(*initialVel).y << endl;
             (*initialVel).y = (*initialVel).y+0.1;
          }
          if (e.key.keysym.sym == SDLK_e)
          {
-             std::cout << "press x to increase the speed in x direction. speed is" <<(*initialVel).y << endl;
+             std::cout << "press e to decrease the speed in y direction. speed is" <<(*initialVel).y << endl;
             (*initialVel).y = (*initialVel).y-0.1;
          }
          if (e.key.keysym.sym == SDLK_f)
          {
-             std::cout << "press x to increase the speed in x direction. speed is" <<(*initialVel).z << endl;
+             std::cout << "press f to increase the speed in z direction. speed is" <<(*initialVel).z << endl;
             (*initialVel).z = (*initialVel).z+0.1;
          }
          if (e.key.keysym.sym == SDLK_g)
          {
-             std::cout << "press x to increase the speed in x direction. speed is" <<(*initialVel).z << endl;
+             std::cout << "press g to increase the speed in z direction. speed is" <<(*initialVel).z << endl;
             (*initialVel).z = (*initialVel).z-0.1;
+         }
+        if (e.key.keysym.sym == SDLK_UP)
+         {
+             std::cout << "press up to increase the speed in z direction. speed is" <<(*initialVel).z << endl;
+            (*initialVel).z = (*initialVel).z+0.1;
+         }
+        if (e.key.keysym.sym == SDLK_DOWN)
+         {
+             std::cout << "press down to decrease the speed in z direction. speed is" <<(*initialVel).z << endl;
+            (*initialVel).z = (*initialVel).z-0.1;
+         }
+        if (e.key.keysym.sym == SDLK_LEFT)
+         {
+             std::cout << "press left to decrease the speed in x direction and increase y direction. x speed is"
+                                    <<(*initialVel).x << " y speed is " << (*initialVel).y << endl;
+            (*initialVel).x = (*initialVel).x-0.1;
+            (*initialVel).y = (*initialVel).y+0.1;
+         }
+         if (e.key.keysym.sym == SDLK_RIGHT)
+         {
+             std::cout << "press right to increase the speed in x direction and decrease y direction. x speed is"
+                                    <<(*initialVel).x << " y speed is " << (*initialVel).y << endl;
+            (*initialVel).x = (*initialVel).x + 0.1;
+            (*initialVel).y = (*initialVel).y-0.1;
          }
         if (e.key.keysym.sym == SDLK_SPACE)
          {
           std::cout <<"cannonball launched...approaching targets" <<endl;
-          //for mesh_
           *launchBall = 1;
          }
-
 
       }
 
@@ -96,10 +106,20 @@ struct my_listener : public CS207::SDL_Listener {
    Point* initialVel;
 };
 
+struct NodeComparatorX {
+  /** Struct/Class of comparator to compare x value of a Node
+  * @param[in] two Node objects
+  * @param[out] boolean, true if the first Node has the smaller position in x direction than the second node
+  */
+   template <typename NODE>
+   bool operator()(const NODE& t1, const NODE& t2) const {
+	return t1.position().x < t2.position().x;
+  }
+}NodeComparatorX;
 struct NodeComparatorY {
-  /** Struct/Class of comparator to compare edge length
-  * @param[in] two triangle objects
-  * @param[out] boolean, true if the first triangle has the smallest edge length than the second triangle
+ /** Struct/Class of comparator to compare y value of a Node
+  * @param[in] two Node objects
+  * @param[out] boolean, true if the first Node has the smaller position in y direction than the second node
   */
    template <typename NODE>
    bool operator()(const NODE& t1, const NODE& t2) const {
@@ -112,11 +132,11 @@ int main(int argc, char* argv[])
 {
 	// Check arguments
 	if (argc < 3) {
-		std::cerr << "Usage: shallow_water NODES_FILE TRIS_FILE\n";
+		std::cerr << "Usage: combine Water_NODES_FILE Water_TRIS_FILE Boat_NODES_FILE Boat_TRIS_FILE Ball_NODES_FILE Ball_TRIS_FILE\n";
 		exit(1);
 	}
 
-	MeshType mesh;
+	MeshType mesh; // this mesh is the shallow water mesh
 	std::vector<typename MeshType::node_type> mesh_node;
 
 	// Read all Points and add them to the Mesh
@@ -171,12 +191,9 @@ int main(int argc, char* argv[])
 			double temp = pow(x-0.75, 2.0) + pow(y, 2.0) - pow(0.15, 2.0);
 			if (temp < 0) {
                 mesh.value((*n),QVar(1.0 + 0.75, 0, 0));
-
-
 			}
 			else {
                 mesh.value((*n),QVar(1.0, 0, 0));
-				//mesh.update_node_value(QVar(1.0, 0, 0), (*n));
 			}
 		}
 	}
@@ -187,22 +204,17 @@ int main(int argc, char* argv[])
 			auto x = (*n).position().x;
 			if (x < 0) {
                 mesh.value((*n),QVar(1.0 + 0.75, 0, 0));
-
 			}
 			else {
                 mesh.value((*n),QVar(1.0, 0, 0));
-
-				//mesh.update_node_value(QVar(1.0, 0, 0), (*n));
-			}
+            }
 		}
 	}
 
 	// Set initial triangle values
-
   for (auto it = mesh.tri_begin(); it != mesh.tri_end(); ++it ) {
 	(*it).value() = ((*it).node1().value() + (*it).node2().value() + (*it).node3().value())/3.0;
   }
-
 
 	// introduce a boat
 	std::vector<double> boat_loc (4,0.0);
@@ -227,14 +239,9 @@ int main(int argc, char* argv[])
 		mesh_boat.add_triangle(mesh_node_boat[t_boat[0]], mesh_node_boat[t_boat[1]], mesh_node_boat[t_boat[2]]);
 	}
 
-
-
-
 	std::cout << "boat mesh: " << mesh_boat.num_nodes() << " "
 		<< mesh_boat.num_edges() << " "
 		<< mesh_boat.num_triangles() << std::endl;
-
-
 
 	// Perform any needed precomputation
 	// Launch the SDLViewer
@@ -242,17 +249,14 @@ int main(int argc, char* argv[])
 
 	viewer.launch();
 
-	// HW4B: Need to define Mesh::node_type and node/edge iterator
-	// before these can be used!
+    // to calculate the time step for euler step
+    auto min_length = *std::min_element(mesh.edge_begin(), mesh.edge_end(), EdgeComparator);
 
-  auto min_length = *std::min_element(mesh.edge_begin(), mesh.edge_end(), EdgeComparator);
+    auto max_h = *std::max_element(mesh.node_begin(), mesh.node_end(), HeightComparator);
 
-      auto max_h = *std::max_element(mesh.node_begin(), mesh.node_end(), HeightComparator);
-
-      double dt = 0.25 * min_length.length() / (sqrt(grav * max_h.value().h));
-      double t_start = 0;
-      double t_end = 20;
-        std::cout << "dt = " << dt << std::endl;
+    double dt = 0.25 * min_length.length() / (sqrt(grav * max_h.value().h));
+    double t_start = 0;
+    double t_end = 20;
 
 
 	auto node_map = viewer.empty_node_map(mesh);
@@ -261,9 +265,9 @@ int main(int argc, char* argv[])
 			Node_Color(max_h.value().h), NodePosition(), node_map);
 	viewer.add_nodes(mesh_boat.node_begin(), mesh_boat.node_end(),
 			CS207::DefaultColor(), BoatNodePosition(), boat_node_map);
-	//viewer.add_edges(mesh.edge_begin(), mesh.edge_end(), node_map);
+
 	viewer.add_triangles(mesh.tri_begin(), mesh.tri_end(), node_map);
-	//viewer.add_edges(mesh_boat.edge_begin(), mesh_boat.edge_end(), boat_node_map);
+
     viewer.add_triangles(mesh_boat.tri_begin(), mesh_boat.tri_end(), boat_node_map);
 
 
@@ -294,11 +298,6 @@ working on the ball now
   auto miny =  *std::min_element(mesh.node_begin(), mesh.node_end(), NodeComparatorY);
   auto min_h = *std::min_element(mesh.node_begin(), mesh.node_end(), HeightComparator);
 
-  //Point Ballcenter(0,0,0);
-  //for(auto it=ballmesh.node_begin(); it != ballmesh.node_end(); ++ it)
-  //{
-  //  Ballcenter += (*it).position();
-  //}
   Point Ballcenter = mass_spring::get_center(ballmesh);//Ballcenter/ballmesh.num_nodes();
 
   Point Balltarget(minx.position().x+.5, miny.position().y-.5, min_h.value().h+0.1);
