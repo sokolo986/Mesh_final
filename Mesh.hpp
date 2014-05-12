@@ -9,7 +9,6 @@
 #include <vector>
 #include <cassert>
 #include <Graph.hpp>
-
 #include <iostream>
 #include <fstream>
 #include <mlpack/core.hpp>
@@ -76,6 +75,8 @@ class Mesh {
 
   /** Forward iterators, which iterates over all triangles with the same edge. */
   class tri_edge_iterator;
+
+  /** Nearest Neighbor class definition */
   class NearestNeighbor;
 
   /** Initializes an empty mesh. */
@@ -190,6 +191,7 @@ class Mesh {
 	   return set_->triangles_[idx_];
 	}
 
+	/** Triangle constructor */
 	Triangle(const Mesh* set, size_type idx)
         : set_(const_cast<Mesh*>(set)),  idx_(idx){
 	}
@@ -236,6 +238,9 @@ class Mesh {
 	return fetch().value_;
     }
 
+    /** Returns one of three nodes for this triangle 
+	@pre	@i is [1,3]
+	@post	node1() && i==1 || node2() && i==2 || node3() && i==3*/
     Node node(size_type i) const {
       //assert(i < 4 && i > 0);
       if (i==1)
@@ -378,27 +383,30 @@ class Mesh {
 
   };
 
-    /*
-  provide interface for parallel computing on all the node
-  */
-
-    /* Nearest Neighbor Accessor Methods */
+    /* Nearest Neighbor Accessor Methods 
+	returns the NearestNeighbor object given a set of positions */
     NearestNeighbor calculateNearestNeighbors(const size_type num_neighbors,std::vector<value_type>& pos){
 	return NearestNeighbor(this, num_neighbors,pos);
     } 
 
+    /* Returns the neighbor of @a idx */
     std::vector<size_type> getNeighbors(Mesh::NearestNeighbor& a, size_type idx) const{
 	return a.n(idx); 
     }
 
+    /* Returns the distance of nearest neighbors to @a idx */
     std::vector<value_type> getNeighborDistances(Mesh::NearestNeighbor& a, size_type idx) const{
 	return a.d(idx); 
     } 
 
+    /* Returns the index of all neighbors for this class 
+	@post	return_neighbor[i+num_neighbors*idx] = ith neighbor of @a idx */
     arma::Mat<size_t> getAllNeighbors(Mesh::NearestNeighbor& a) const{
 	return a.all_n(); 
     }
 
+    /* Returns the index of all neighbors for this class 
+	@post	return_neighbor[i+num_neighbors*idx] = ith neighbor's distance of @a idx */
     arma::mat getAllNeighborDistances(Mesh::NearestNeighbor& a) const{
 	return a.all_d(); 
     } 
@@ -423,15 +431,18 @@ class Mesh {
     /** Returns adjacent triangles of a triangle */
     std::vector<Triangle> adjacent_triangles(Triangle t){
 	std::vector<Triangle> tri;
-	for (auto i = edge_lookup_[t.edge1().index()].begin(); i < edge_lookup_[t.edge1().index()].end(); ++i){
+	auto it_end = edge_lookup_[t.edge1().index()].end();
+	for (auto i = edge_lookup_[t.edge1().index()].begin(); i < it_end; ++i){
 		if ( (*i) != t.idx_)
 			tri.push_back(triangle(*i));
 	}
-	for (auto i = edge_lookup_[t.edge2().index()].begin(); i < edge_lookup_[t.edge2().index()].end(); ++i){
+	it_end = edge_lookup_[t.edge2().index()].end();
+	for (auto i = edge_lookup_[t.edge2().index()].begin(); i < it_end; ++i){
 		if ((*i) != t.idx_)
 			tri.push_back(triangle(*i));
 	}
-	for (auto i = edge_lookup_[t.edge3().index()].begin() ; i < edge_lookup_[t.edge3().index()].end(); ++i){
+	it_end = edge_lookup_[t.edge3().index()].end();
+	for (auto i = edge_lookup_[t.edge3().index()].begin() ; i < it_end; ++i){
 		if ((*i) != t.idx_)
 			tri.push_back(triangle(*i));
 	}
@@ -486,6 +497,7 @@ class Mesh {
 	return this->triangle(tri_idx);
     }
 
+    /* This class computes the NearestNeighbor to a set of data points */
     class NearestNeighbor: private totally_ordered<NearestNeighbor> {
       private:
 	friend class Mesh;
@@ -509,9 +521,6 @@ class Mesh {
 		a.Search(num_neighbors_,n_,d_);
 	}
 	
-	NearestNeighbor(const Mesh* set, const size_type num_neighbors, const arma::Mat<size_t> n, const arma::mat d):set_(const_cast<Mesh*>(set)),num_neighbors_(num_neighbors),n_(n),d_(d){
-	}
-
       public:
 	typedef mlpack::neighbor::NeighborSearch<NearestNeighborSort, mlpack::metric::EuclideanDistance> nn; 
 
@@ -522,6 +531,7 @@ class Mesh {
 		assert((idx*num_neighbors_) < n_.size());
 	
 		std::vector<size_type> v;
+		v.reserve(num_neighbors_);
 		for(size_type j=0; j<num_neighbors_; ++j)
 			v.push_back(n_[num_neighbors_*idx+j]);
 		return v;
@@ -531,6 +541,7 @@ class Mesh {
 		assert((idx*num_neighbors_) < n_.size());
 	
 		std::vector<value_type> v;
+		v.reserve(num_neighbors_);
 		for(unsigned j=0; j<num_neighbors_; ++j)
 			v.push_back(d_[num_neighbors_*idx+j]);
 		return v;
@@ -543,12 +554,13 @@ class Mesh {
 		return d_;
 	}
 
-	NearestNeighbor operator=(NearestNeighbor& n){
+	NearestNeighbor& operator=(NearestNeighbor& n){
+		swap(*this,n);
 		return *this;			
 	}
 };  
 
-  /** Iterates over all triangles. */
+  /** Random access iterator that iterates over all triangles. */
   class tri_iterator: private totally_ordered<tri_iterator> {
    private:
     friend class Mesh;
@@ -584,12 +596,22 @@ class Mesh {
 	++idx_;
 	return *this;
     }
+
+    /** Decrements the iterator */
     tri_iterator& operator--(){
         --idx_;
         return *this;
     }
+
+    /** Accesses the iterator at a random location */
     tri_iterator& operator-(tri_iterator& a){
         idx_= idx_ - a.idx_;
+        return *this;
+    }
+
+    /** Accesses the iterator at a random location */
+    tri_iterator& operator+(tri_iterator& a){
+        idx_= idx_ + a.idx_;
         return *this;
     }
 
@@ -646,7 +668,7 @@ class Mesh {
 
     /** Test the equality of an iterator based on current position.  */
     bool operator==(const vertex_iterator& a) const{
-	return idx_==a.idx_ && set_==a.set_ && nidx_==a.nidx_;
+	return idx_==a.idx_ && nidx_==a.nidx_ && set_==a.set_;
     }
 
     /** Test the inequality of an iterator based on current position.  */
@@ -679,7 +701,7 @@ class Mesh {
     /** Difference between iterators */
     typedef std::ptrdiff_t difference_type;
 
-    /** Constructs an invalid iterator. */
+    /** Constructs an invalid tri_egde_iterator. */
     tri_edge_iterator() {
     }
 
@@ -696,7 +718,7 @@ class Mesh {
 
     /** Test the equality of an iterator based on current position.  */
     bool operator==(const tri_edge_iterator& a) const{
-	return idx_==a.idx_ && set_==a.set_ && eidx_==a.eidx_;
+	return idx_==a.idx_ && eidx_==a.eidx_ && set_==a.set_;
     }
 
     /** Test the equality of an iterator based on current position.  */
@@ -719,6 +741,7 @@ class Mesh {
 	/*indexed by node UID. Stores triangles data.**/
 	std::vector<tri_info_type> triangles_;
 	NearestNeighbor nn_;
+
 	/** Stores Triangle Information */
 	struct tri_info_type {
 		Mesh* set_;
