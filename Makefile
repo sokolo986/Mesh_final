@@ -7,7 +7,7 @@
 #SDLEXEC += viewer
 #SDLEXEC += subgraph
 #SDLEXEC += mass_spring
-SDLEXEC += shallow_water_ext
+#SDLEXEC += shallow_water_ext
 #SDLEXEC += test_nodes
 #SDLEXEC += test_edges
 #SDLEXEC += test
@@ -18,7 +18,8 @@ SDLEXEC += shallow_water_ext
 
 #SDLEXEC += mass_spring
 #SDLEXEC += poisson
-SDLEXEC += shallow_water
+#SDLEXEC += shallow_water
+SDLEXEC += combine
 #SDLEXEC += testMlpack
 #SDLEXEC += testMlpack2
 #SDLEXEC += testMlpack3
@@ -61,7 +62,7 @@ CXXFLAGS += -fopenmp -funroll-loops -O3 -W -Wall -Wextra #-Wfatal-errors
 LDFLAGS += -L./mlpack-1.0.8/build/lib
 
 # Define any libraries to link into executable
-#   To link in libraries (libXXX.so or libXXX.a) use -lXXX
+# To link in libraries (libXXX.so or libXXX.a) use -lXXX
 ifeq ($(UNAME), Linux)
 LDLIBS += -lSDL -lGL -lGLU -lmlpack
 endif

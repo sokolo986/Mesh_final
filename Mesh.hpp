@@ -546,6 +546,10 @@ class Mesh {
 			v.push_back(d_[num_neighbors_*idx+j]);
 		return v;
 	}
+	
+	const size_type& getNumberNeighbors(){
+		return num_neighbors_;
+	}
 
 	const arma::Mat<size_t>& all_n(){
 		return n_;
@@ -558,6 +562,7 @@ class Mesh {
 		swap(*this,n);
 		return *this;			
 	}
+
 };  
 
   /** Random access iterator that iterates over all triangles. */
@@ -759,11 +764,11 @@ class Mesh {
 	};
 };
 
-/*
-  template<typename FUNC, typename ITER>
+
+  /*template<typename FUNC, typename ITER>
   void applytoall(ITER ibegin, ITER iend, FUNC& functor, int threads)
   {
-  omp_set_num_threads(threads);
+  omp_set_num_threads(threads);*/
 
 template<typename FUNC, typename ITER>
   void applytoall(ITER ibegin, ITER iend, FUNC& functor, int threads)
@@ -782,4 +787,3 @@ template<typename FUNC, typename ITER>
 	//}
   }
 
-*/
