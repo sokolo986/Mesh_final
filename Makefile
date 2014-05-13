@@ -22,7 +22,8 @@
 SDLEXEC += combine
 #SDLEXEC += testMlpack
 #SDLEXEC += testMlpack2
-#SDLEXEC += testMlpack3
+SDLEXEC += testMlpack3
+SDLEXEC += combine
 #SDLEXEC += testOpenMP
 #SDLEXEC += OPENMPshallow
 #SDLEXEC += OPENMPshallow2
@@ -51,8 +52,10 @@ DEPSFLAGS = -MD -MF $(DEPSFILE) #-MP
 #   To include directories use -Ipath/to/files
 
 #INCLUDES += -I.
-INCLUDES += -I. -I/usr/include -I/usr/include/libxml2 #added
-INCLUDES += -I./mlpack-1.0.8/build/include #added
+INCLUDES += -I.-I/usr/include -I/usr/include/libxml2 #added
+#INCLUDES += -I ./mlpack-1.0.8/build/include #added
+INCLUDES += -I./mlpack-1.0.8/include #added
+INCLUDES += -I./home/mingzhu/CS207Final/Mesh_final/mlpack-1.0.8/include
 
 # Define CXX compile flags
 CXXFLAGS += -fopenmp -funroll-loops -O3 -W -Wall -Wextra #-Wfatal-errors
@@ -60,7 +63,8 @@ CXXFLAGS += -fopenmp -funroll-loops -O3 -W -Wall -Wextra #-Wfatal-errors
 # Define any directories containing libraries
 #   To include directories use -Lpath/to/files
 LDFLAGS += -L./mlpack-1.0.8/build/lib
-
+LDFLAGS += -L./mlpack-1.0.8/lib
+LDFLAGS += -L./home/mingzhu/CS207Final/Mesh_final/mlpack-1.0.8/lib
 # Define any libraries to link into executable
 # To link in libraries (libXXX.so or libXXX.a) use -lXXX
 ifeq ($(UNAME), Linux)

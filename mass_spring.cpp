@@ -547,14 +547,23 @@ struct PlaneConstraint {
    Point Balltarget;
    Point* vel_init;
    MeshType ballmeshOrig;
+
+
+   MeshType mesh; // water mesh
+   MeshType ballmesh;
    int* launchBall;
+   int* reset_ball;
+
  public:
    // public constructor: given plane position
-   PlaneConstraint(const double& plane, MeshType ballmeshOrig,  Point Balltarget, Point& vel_init, int& launchBall) :
-                            plane_(plane), Balltarget(Balltarget), vel_init(&vel_init), ballmeshOrig(ballmeshOrig), launchBall(&launchBall) {}
+
+   PlaneConstraint(double plane, MeshType ballmeshOrig,  Point Balltarget, Point& vel_init, int& launchBall, int& reset_ball) :
+                            plane_(plane), Balltarget(Balltarget), vel_init(&vel_init), ballmeshOrig(ballmeshOrig), launchBall(&launchBall), reset_ball(&reset_ball)  {}
    // public constructor: use the default plane position
    PlaneConstraint() : plane_(plane_const) {}
-
+ //   double nodeplus(double sum, Node n2){
+  //      return sum + n2.position().z;
+  //  }
   /** Move nodes that go below -0.75 on the z plane back to the closest
    *  point on the z plane at -0.75 and set these nodes' velocities on
    *  the z axis to 0.
@@ -572,15 +581,30 @@ struct PlaneConstraint {
   void operator()(MESH& m, double t) {
     (void) t;
     bool reset = false;
+    double avg = 0;
+
+    //double sum = std::accumulate(m.node_begin(), m.node_end(), 0.0, nodeplus);
+
+//    for(auto it=m.node_begin(); it != m.node_end(); ++ it)
+    //{
+     //   avg+=(*it).position().z;
+
+    //}
+
+    //avg = avg / m.num_nodes();
+
+    //cout << "average is " << avg << "estimated lowest is "<<   plane_ <<     endl;
+
     for(auto it=m.node_begin(); it != m.node_end(); ++ it)
     {
         if ((*it).position().z < plane_)
         {
             reset = true;
             *launchBall = 0;
+            *reset_ball = 1;
         }
     }
-    if (reset)
+    /*if (reset)
     {
         auto it=m.node_begin();
         auto cit = ballmeshOrig.node_begin();
@@ -593,7 +617,10 @@ struct PlaneConstraint {
 
 
     }
+    */
     }
+
+
 };
 
 /** Constraint function object for constraining the nodes of the graph
