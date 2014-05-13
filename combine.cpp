@@ -9,6 +9,25 @@
 #include "shallow_water_ext.cpp"
 #include "mass_spring.cpp"
 
+struct New_Node_Color{
+    double nMin_;
+    double nMax_;
+    MeshType::NearestNeighbor nn_;
+    New_Node_Color(const double min_element, const double max_element, const MeshType::NearestNeighbor nn): nMin_(min_element),nMax_(max_element),nn_(nn){
+    };
+
+    template <typename NODE>
+    CS207::Color operator()(NODE& node) 
+     {
+	   auto pos = nn_.d(node.index());
+           double average = std::accumulate(pos.begin(),pos.end(),0.0)/((double)pos.size());
+	   double c = (average-nMin_)/(nMax_-nMin_);
+	   if (c > 1) c = 1;
+	   else if (c< 0) c=0;
+	   return CS207::Color::make_heat(c);
+     }
+};
+
 
 struct NodeComparatorX {
   /** Struct/Class of comparator to compare edge length
@@ -368,10 +387,9 @@ working on the ball now
   viewer.add_edges(ballmesh.edge_begin(), ballmesh.edge_end(), ball_node_map);
   int launchBall = 0;
 
-        // add listener
+  // add listener
   my_listener<mass_spring::MeshType>* l = new my_listener<mass_spring::MeshType>(viewer,ballmesh, launchBall, initialVel);
   viewer.add_listener(l);
-
   viewer.center_view();
 
 
@@ -390,21 +408,33 @@ END OF working on the ball now
 *************************************************************/
 
 
-
+	std::vector<double> pos; 
+	unsigned num_neighbors = 10; //num of neighors to return
 	// Begin the time stepping
 	for (double t = t_start; t < t_end; t += dt) {
 		// Step forward in time with forward Euler
 		systime = t;
 		hyperbolic_step_ext(mesh, f, t, dt, 1000.0, boat_loc, pressure);
-
+		
 		// Update node values with triangle-averaged values
 		post_process(mesh);
+		
+		// Nearest Neighbor coloring
+		for (auto it = mesh.node_begin(); it != mesh.node_end(); ++it ) 	
+			pos.push_back((*it).value().h);
+		
+		MeshType::NearestNeighbor a = mesh.calculateNearestNeighbors(num_neighbors,pos);
+		auto all_d = mesh.getAllNeighborDistances(a);
+		double* min_pos = std::min_element(all_d.begin(),all_d.end());
+		double* max_pos = std::max_element(all_d.begin(),all_d.end());
+		// --------------- Coloring end
+
 		// Update the viewer with new node positions
-		// HW4B: Need to define node_iterators before these can be used!
 		viewer.add_nodes(mesh.node_begin(), mesh.node_end(),
-				Node_Color(max_h.value().h), NodePosition(), node_map);
+				New_Node_Color((*min_pos),(*max_pos),a), NodePosition(), node_map);
 		viewer.add_nodes(mesh_boat.node_begin(), mesh_boat.node_end(),
 				CS207::DefaultColor(), BoatNodePosition(), boat_node_map);
+		pos.clear();
 
         if(launchBall)
         {
